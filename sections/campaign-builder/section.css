@@ -11,13 +11,16 @@
 #p-builder .cb-mast{padding-bottom:22px;margin-bottom:0;}
 
 /* ── control bar: scope (left) + actions (right) ── */
-#p-builder .cb-bar{display:flex;align-items:center;justify-content:space-between;gap:12px 18px;flex-wrap:wrap;
+#p-builder .cb-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px;
   background:#fff;border:1px solid var(--ed-line);border-radius:12px;
   box-shadow:0 1px 0 rgba(0,0,0,.02),0 18px 36px -32px rgba(25,32,43,.4);
   padding:11px 14px;margin-bottom:22px;}
-#p-builder .cb-scope-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+#p-builder .cb-scope-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;flex:1 1 auto;padding:0}
 #p-builder .scope-l{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--ed-mono);margin-right:4px}
-#p-builder .cb-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+#p-builder .cb-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:0 0 auto;justify-content:flex-end;
+  padding:0;border-top:0;background:transparent}
+#p-builder .cb-actions .cb-primary{margin-left:4px}
+#p-builder .cb-actions .cb-div{display:inline-block}
 #p-builder .cb-uicon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:30px;border:0;background:transparent;color:var(--ed-mono);border-radius:8px;cursor:pointer;transition:all .15s}
 #p-builder .cb-uicon:hover{background:var(--ed-soft);color:var(--ed-navy)}
 #p-builder .cb-uicon.cb-danger:hover{background:#fcebec;color:var(--cb-red)}
