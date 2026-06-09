@@ -1,51 +1,30 @@
-<!-- Campaign Builder — section markup (mounted into #p-builder by the loader) -->
-<div class="cbuilder gov-ed">
-
-  <header class="ed-masthead">
-    <p class="ed-kicker">SC//Governance · Campaign Builder</p>
-    <h1>Campaign Builder <em>— build &amp; tag</em></h1>
-    <p class="ed-lede">Fill in the campaign once, then add each email send. Tagging fields use the canonical Tag
-      Library values, so every send gets its Pardot name and tags resolved live. When you're done, generate the
-      Word build doc — ready to hand off.</p>
-  </header>
-
-  <div id="scope"></div>
-  <div id="campaignCard"></div>
-  <div id="emailModule">
-    <div id="emails"></div>
-    <button class="cb-add" id="addEmail">+ Add another email send</button>
+<!-- Campaign Builder — mounted into #p-builder by the dashboard loader.
+     No .page wrapper and no <script> here (the loader adds those). -->
+<div class="cb-topbar">
+  <div class="cb-tb-l">
+    <span class="cb-brand">Campaign Builder</span>
+    <span class="cb-brand-sub">Build &amp; tag a campaign, then export the Word doc</span>
   </div>
-  <div id="formModule"></div>
-  <div id="cadenceModule"></div>
-  <div id="qualifiedModule"></div>
-
-</div>
-
-<div class="cb-bar">
-  <div class="cb-bar-in">
-    <div class="cb-status" id="status"></div>
-    <div class="cb-actions">
-      <div class="cb-draft-tools">
-        <span class="cb-draft-state" id="cbDraftState"></span>
-        <button class="cb-mini" id="cbSaveDraftBtn" type="button" title="Download this build as a .json draft">Save draft</button>
-        <button class="cb-mini" id="cbLoadDraftBtn" type="button" title="Load a .json draft">Load draft</button>
-        <button class="cb-mini danger" id="cbStartFresh" type="button" title="Clear the build and the saved draft">Start fresh</button>
-      </div>
-      <span class="cb-bar-div" aria-hidden="true"></span>
-      <button class="cb-import" id="importBtn" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-          stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="m7 13 5-5 5 5"/><path d="M5 3h14"/></svg>
-        Import build doc
-      </button>
-      <button class="cb-gen" id="generate">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-          stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
-        Generate Word doc
-      </button>
-    </div>
-    <input type="file" id="importFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
-    <input type="file" id="cbDraftFile" accept=".json,application/json" hidden>
+  <div class="cb-tb-r">
+    <span id="cbDraftState" class="cb-draft-state"></span>
+    <span id="cb-status"></span>
+    <button class="cb-mini" data-draftsave>Save draft</button>
+    <button class="cb-mini" data-draftload>Load draft</button>
+    <button class="cb-mini" data-import>Import .docx</button>
+    <button class="cb-mini cb-danger" data-draftfresh>Start fresh</button>
+    <button class="cb-primary" data-gen>Generate Word doc</button>
   </div>
 </div>
-<div class="cb-toast" id="toast"></div>
-<datalist id="timeopts"></datalist>
+
+<div class="cb-scope-row" id="cb-scope"></div>
+
+<div class="cb-panes">
+  <aside class="cb-tree" id="cb-tree"></aside>
+  <main class="cb-editor" id="cb-editor"></main>
+  <aside class="cb-rail" id="cb-rail"></aside>
+</div>
+
+<div id="cb-toast" class="cb-toast"></div>
+<input type="file" id="cb-importfile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+<input type="file" id="cb-draftfile" accept=".json,application/json" hidden>
+<datalist id="cb-timeopts"></datalist>

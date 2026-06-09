@@ -192,7 +192,8 @@ function computeEmail(i){
   const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');
   const nm=cleanName(c.name)||'Campaign name';
   const num=e.number||String(i+1);
-  const pardotName=prefix+nm+(e.hasOrder?(' | Email '+num):'');
+  const audLbl=e.audience?revLabel(AUDIENCE,e.audience):'';
+  const pardotName=prefix+nm+(e.hasOrder?(' | Email '+num):'')+(audLbl?(' | '+audLbl):'');
   const campaignTag=matched?reg.tag:(ever?('campaign-'+(slug(cleanName(c.name))||'name')):('campaign-'+(slug(cleanName(c.name))||'name')+'-q'+(c.quarter||'?')+'-'+(c.year||'yyyy')));
   const tags=[{t:campaignTag,c:'Campaign',req:true,src:matched?'reg':'doc'}];
   if(e.emailType)tags.push({t:e.emailType,c:'Send Type',req:true,src:'doc'});
@@ -205,239 +206,8 @@ function computeEmail(i){
 function cadenceName(){const c=state.campaign;const reg=findCampaign(c.name);if(!reg||!reg.salesloft)return '';const ever=isEvergreen();return (ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | '))+(c.name||'Campaign name');}
 function effPardot(i){const e=state.emails[i];return e.pardotEdited?(e.pardotName||''):computeEmail(i).pardotName;}
 
-//// ============ RENDER ============
-function fieldHtml(f,val,key){
-  if(f.type==='check'){
-    return `<label class="cb-check"><input type="checkbox" data-k="${key}" ${val?'checked':''}><span>${f.l}${f.hint?` <span style="color:var(--ed-mono);opacity:.8">${f.hint}</span>`:''}</span></label>`;
-  }
-  const lab=f.l?`<span class="cb-fl">${f.l}${f.req?'<span class="rq">*</span>':''}${f.hint?` <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.8">${f.hint}</span>`:''}</span>`:'';
-  let ctrl;
-  if(f.type==='select'){
-    const opts=f.opts.map(o=>`<option value="${o[1]}" ${o[1]===val?'selected':''}>${o[0]}</option>`).join('');
-    ctrl=`<select data-k="${key}">${f.noEmpty?'':`<option value="">${f.none||'\u2014 select \u2014'}</option>`}${opts}</select>`;
-  } else if(f.type==='tokens'){
-    const arr=val||[];
-    ctrl=`<div class="cb-tokens">${arr.map((t,j)=>`<span class="cb-token">${escH(t)}<button data-rmtoken="${key}|${j}" title="Remove">\u00d7</button></span>`).join('')}<span class="cb-token-add"><input data-addtoken="${key}" placeholder="${f.ph||'Add\u2026'}"><button data-addbtn="${key}">Add</button></span></div>`;
-  } else if(f.type==='audiences'){
-    const items=(val?String(val).split('\n'):[]).map(s=>s.trim()).filter(Boolean);
-    ctrl=`<div class="cb-aud">`
-      +`<div class="cb-tokens">${items.map((t,j)=>`<span class="cb-token">${escH(t)}<button data-rmaud="${key}|${j}" title="Remove">\u00d7</button></span>`).join('')}</div>`
-      +`<div style="position:relative"><input data-audsearch="${key}" placeholder="${f.ph||'Search audiences\u2026'}" autocomplete="off" style="width:100%">`
-      +`<div data-auddd="${key}" style="display:none;position:absolute;z-index:30;left:0;right:0;top:100%;margin-top:2px;max-height:220px;overflow:auto;background:#fff;border:1px solid var(--ed-border,#E3DDD0);border-radius:8px;box-shadow:0 6px 20px rgba(10,37,64,.14)"></div></div>`
-      +`</div>`;
-  } else if(f.type==='textarea'){
-    ctrl=`<textarea data-k="${key}" class="${f.tall?'tall':''}" placeholder="${f.ph||''}">${val?String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;'):''}</textarea>`;
-  } else if(f.type==='chips'){
-    ctrl=`<div class="cb-chips" data-k="${key}">${f.opts.map(o=>`<span class="cb-opt ${(val||[]).indexOf(o[1])>=0?'on':''}" data-tag="${o[1]}">${o[0]}</span>`).join('')}</div>`;
-  } else if(f.type==='rte'){
-    ctrl=`<div class="rte-tools" data-rte-tools="${key}">`
-      +`<button type="button" class="rte-btn" data-cmd="bold" title="Bold"><b>B</b></button>`
-      +`<button type="button" class="rte-btn" data-cmd="italic" title="Italic"><i>I</i></button>`
-      +`<button type="button" class="rte-btn" data-cmd="underline" title="Underline"><u>U</u></button>`
-      +`<button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Bulleted list">&bull; List</button>`
-      +`<button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1. List</button>`
-      +`<button type="button" class="rte-btn" data-cmd="createLink" title="Insert link">Link</button>`
-      +`<button type="button" class="rte-btn" data-cmd="removeFormat" title="Clear formatting">Clear</button>`
-      +`</div><div class="rte" contenteditable="true" data-rte="${key}" data-ph="${f.ph||''}">${val||''}</div>`;
-  } else if(f.type==='datalist'){
-    ctrl=`<input list="${f.listId}" data-k="${key}" value="${val?String(val).replace(/"/g,'&quot;'):''}" placeholder="${f.ph||''}" autocomplete="off">`;
-  } else if(f.type==='date'){
-    ctrl=`<input type="date" data-k="${key}" value="${val||''}">`;
-  } else if(f.numeric){
-    ctrl=`<input type="number" min="1" step="1" inputmode="numeric" data-k="${key}" value="${val?String(val).replace(/"/g,'&quot;'):''}" placeholder="${f.ph||''}">`;
-  } else {
-    ctrl=`<input data-k="${key}" value="${val?String(val).replace(/"/g,'&quot;'):''}" placeholder="${f.ph||''}">`;
-  }
-  return `<div class="cb-f ${f.wide?'wide':''}" data-req="${f.req?1:''}">${lab}${ctrl}</div>`;
-}
 
-const campaignFields=[
-  {k:'name',l:'Campaign Name',req:true,wide:true,ph:'Imaging Service'},
-  {k:'crm',l:'CRM Campaign Link',wide:true,ph:'https://scalecomputing.lightning.force.com/...'},
-  {k:'quarter',l:'Quarter',req:true,type:'select',opts:QUARTERS},
-  {k:'year',l:'Year',req:true,type:'select',opts:YEARS},
-];
-const emailGroups=[
-  {title:'Tagging — feeds the Tag Builder',fields:[
-    {k:'pardotName',l:'Pardot Email Name',hint:'(auto — editable)',wide:true,ph:'Q2-2026 | Campaign | Email 1'},
-    {k:'hasOrder',l:'This send has an email order #',type:'check'},
-    {k:'number',l:'Email #',numeric:true,ph:'1',onlyIfOrder:true},
-    {k:'emailType',l:'Email Type',req:true,type:'select',opts:SENDTYPE},
-    {k:'contentType',l:'Content Type',req:true,type:'select',opts:CONTENT},
-    {k:'audience',l:'Audience',req:true,type:'select',opts:AUDIENCE},
-    {k:'theme',l:'Theme',req:true,type:'select',opts:THEME},
-    {k:'ab',l:'A/B Test',type:'select',opts:AB,noEmpty:true},
-    {k:'cta',l:'CTA',type:'chips',opts:CTAOPTS,wide:true},
-  ]},
-  {title:'To — audience & lists',fields:[
-    {k:'lists',l:'Lists (Send To)',wide:true,type:'audiences',ph:'Search audiences or type to add\u2026'},
-    {k:'suppressionList',l:'Suppression Lists',wide:true,type:'tokens',ph:'Add a suppression list…'},
-  ]},
-  {title:'From — sender',fields:[
-    {k:'senderName',l:'Sender Name',ph:'Scale Computing'},
-    {k:'fromEmail',l:'From Email Address',ph:'noreply@scalecomputing.com'},
-    {k:'replyTo',l:'Reply-To Email Address',wide:true,ph:'noreply@scalecomputing.com'},
-  ]},
-  {title:'Subject',fields:[
-    {k:'subjectA',l:'Subject Line A',req:true,wide:true},
-    {k:'subjectB',l:'Subject Line B',hint:'(if A/B testing)',wide:true},
-    {k:'preview',l:'Preview Copy',wide:true,type:'textarea'},
-  ]},
-  {title:'Schedule',fields:[
-    {k:'sendDate',l:'Send Date',type:'date'},
-    {k:'sendTime',l:'Send Time',hint:'(pick or type · 15-min steps)',type:'datalist',listId:'timeopts',ph:'10:00 AM EST'},
-  ]},
-  {title:'Email build',fields:[
-    {k:'hero',l:'Hero Image URL',wide:true,ph:'https://info.scalecomputing.com/...'},
-    {k:'body',l:'Body Copy',hint:'(rich text)',wide:true,type:'rte',ph:'Write the email body…'},
-    {k:'mainCta',l:'Main CTA — button / link',wide:true,ph:'[Get Pricing] → https://www.scalecomputing.com/pricing'},
-    {k:'secCtaCopy',l:'Secondary CTA — copy',hint:'(optional)',wide:true,type:'textarea'},
-    {k:'secCta',l:'Secondary CTA — button / link',wide:true,ph:'[Schedule a Demo] → https://...'},
-  ]},
-];
-const chev=`<svg class="cb-chev" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>`;
-function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-
-function renderScope(){
-  const opts=[['email','Email',true],['form','Pardot Form',true],['cadence','SalesLoft Cadence',true],['qualified','Qualified Experience',true]];
-  document.getElementById('scope').innerHTML='<div class="scope-bar"><span class="scope-lbl">This build includes</span>'+
-    opts.map(o=>`<button type="button" class="scope-opt ${state.include[o[0]]?'on':''} ${o[2]?'':'soon'}" ${o[2]?`data-scope="${o[0]}"`:'disabled'}>${o[1]}${o[2]?'':' · soon'}</button>`).join('')+'</div>';
-}
-function showModules(){
-  document.getElementById('emailModule').style.display=state.include.email?'':'none';
-  const fm=document.getElementById('formModule');
-  if(state.include.form){if(!state.form)state.form=newForm();fm.style.display='';renderForm();}else fm.style.display='none';
-  const cm=document.getElementById('cadenceModule');
-  if(state.include.cadence){if(!state.cadence)state.cadence=newCadence();cm.style.display='';renderCadence();}else cm.style.display='none';
-  const qm=document.getElementById('qualifiedModule');
-  if(state.include.qualified){if(!state.qualified)state.qualified=newQualified();qm.style.display='';renderQualified();}else qm.style.display='none';
-}
-function autoFormName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(cleanName(c.name)||'Campaign name');}
-function effFormName(){const f=state.form;return f&&f.nameEdited?(f.name||''):autoFormName();}
-function updateFormName(){const f=state.form;if(!f||f.nameEdited)return;const auto=autoFormName();f.name=auto;const inp=document.querySelector('[data-k="f.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;}
-function autoCadenceName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(cleanName(c.name)||'Campaign name');}
-function effCadenceName(){const c=state.cadence;return c&&c.nameEdited?(c.name||''):autoCadenceName();}
-function updateCadenceName(){const c=state.cadence;if(!c||c.nameEdited)return;const auto=autoCadenceName();const inp=document.querySelector('[data-k="cad.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='\u00b7 '+auto;}
-function autoQualifiedName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(cleanName(c.name)||'Campaign name');}
-function effQualifiedName(){const q=state.qualified;return q&&q.nameEdited?(q.name||''):autoQualifiedName();}
-function updateQualifiedName(){const q=state.qualified;if(!q||q.nameEdited)return;const auto=autoQualifiedName();const inp=document.querySelector('[data-k="q.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='\u00b7 '+auto;}
-function crmDisplay(){const c=state.campaign;return (escH(c.name||'\u2014'))+(c.crm?(' \u00b7 '+escH(c.crm)):'');}
-function updateCrmLine(){const c=state.campaign;const n=document.querySelector('[data-crmname]');if(n)n.innerHTML=escH(c.name||'\u2014');const l=document.querySelector('[data-crmlink]');if(l)l.innerHTML=escH(c.crm||'\u2014');}
-const formGroups=[
-  {title:'',fields:[
-    {k:'name',l:'Pardot Form Name',hint:'(auto — editable)',wide:true,ph:'Q2-2026 | Campaign'},
-  ]},
-  {title:'',fields:[
-    {k:'previewLink',l:'Form Preview Link',wide:true,ph:'https://info.scalecomputing.com/l/...'},
-    {k:'iframe',l:'iFrame Code',wide:true,type:'textarea'},
-  ]},
-  {title:'Completion actions',fields:[
-    {k:'source',l:'Source'},{k:'leadSource',l:'Detailed Lead Source'},
-    {k:'slack',l:'Notify Slack Channel'},
-    {k:'autoresponder',l:'Send Email (Autoresponder)',wide:true,ph:'Autoresponder email name / link'},
-    {k:'displayMsg',l:'Display Message',wide:true,type:'textarea'},
-  ]},
-];
-function renderForm(){
-  const f=state.form;if(!f)return;
-  const detail=formGroups.map(g=>{
-    let inner=g.fields.map(fl=>fieldHtml(fl,fl.k==='name'?effFormName():f[fl.k],'f.'+fl.k)).join('');
-    if(g.title==='Completion actions'){const note=' <span style="font-weight:400;text-transform:none;letter-spacing:0;opacity:.8">(pulled from campaign)</span>';
-      inner+=`<div class="cb-f wide"><span class="cb-fl">Add to CRM Campaign${note}</span><div class="cb-readonly" data-crmname>${escH(state.campaign.name||'\u2014')}</div></div>`
-        +`<div class="cb-f wide"><span class="cb-fl">CRM Campaign Link${note}</span><div class="cb-readonly" data-crmlink>${escH(state.campaign.crm||'\u2014')}</div></div>`;}
-    return `<div class="cb-group">${g.title?`<div class="cb-glabel">${g.title}</div>`:''}<div class="cb-grid">${inner}</div></div>`;
-  });
-  const fieldsRows=f.fields.map((fl,j)=>`<div class="ff-row">
-    <input class="ff-label" data-ff="${j}" value="${(fl.label||'').replace(/"/g,'&quot;')}" placeholder="Field label…">
-    <label class="ff-chk"><input type="checkbox" data-ffreq="${j}" ${fl.req?'checked':''}>Req</label>
-    <label class="ff-chk"><input type="checkbox" data-ffcustom="${j}" ${fl.custom?'checked':''}>Custom</label>
-    <button class="ff-del" data-ffdel="${j}" title="Remove">\u00d7</button></div>`).join('');
-  const fieldsGroup=`<div class="cb-group"><div class="cb-glabel">Form fields</div>
-    <div class="ff-list">${fieldsRows}<button type="button" class="cb-add sm" data-ffadd>+ Add field</button></div></div>`;
-  const tcGroup=`<div class="cb-group"><div class="cb-glabel">Terms &amp; conditions</div><div class="cb-grid">${fieldHtml({k:'tc',l:'',wide:true,type:'rte',ph:'Enter terms & conditions…'},f.tc,'f.tc')}</div></div>`;
-  document.getElementById('formModule').innerHTML=`<section class="cb-card ${f.open?'':'collapsed'}" data-card="form">
-    <div class="cb-head" data-toggle="form">${chev}<span class="cb-title">Pardot Form<span class="sub" id="formSub"></span></span></div>
-    <div class="cb-body">${detail[0]}${fieldsGroup}${detail[1]}${detail[2]}${tcGroup}</div>
-  </section>`;
-  const sub=document.getElementById('formSub');if(sub)sub.textContent='· '+effFormName();
-}
-function renderCadence(){
-  const c=state.cadence;if(!c)return;
-  const nameField=fieldHtml({k:'name',l:'Internal Flow Name',hint:'(auto — editable)',wide:true,ph:'Q3-2026 | Campaign'},effCadenceName(),'cad.name');
-  const steps=c.steps.map((stp,i)=>`<div class="cb-group"><div class="cb-glabel">Email Step ${i+1}${c.steps.length>1?` <button class="ff-del" data-cadstepdel="${i}" title="Remove step">×</button>`:''}</div><div class="cb-grid">${fieldHtml({k:'subject',l:'Subject Line',wide:true,ph:'(blank = reply in thread)'},stp.subject,'cad.'+i+'.subject')}${fieldHtml({k:'body',l:'Body Copy',hint:'(merge tokens ok, e.g. {!firstname})',wide:true,type:'textarea',ph:'Hi {!firstname},…'},stp.body,'cad.'+i+'.body')}</div></div>`).join('');
-  document.getElementById('cadenceModule').innerHTML=`<section class="cb-card ${c.open?'':'collapsed'}" data-card="cadence">
-    <div class="cb-head" data-toggle="cadence">${chev}<span class="cb-title">SalesLoft Cadence<span class="sub" id="cadenceSub"></span></span></div>
-    <div class="cb-body"><div class="cb-group"><div class="cb-grid">${nameField}</div></div>${steps}<button type="button" class="cb-add sm" data-cadstepadd>+ Add email step</button></div>
-  </section>`;
-  const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='· '+effCadenceName();
-}
-function renderQualified(){
-  const q=state.qualified;if(!q)return;
-  const f=(k,l,opts)=>fieldHtml(Object.assign({k:k,l:l},opts||{}),k==='name'?effQualifiedName():q[k],'q.'+k);
-  document.getElementById('qualifiedModule').innerHTML=`<section class="cb-card ${q.open?'':'collapsed'}" data-card="qualified">
-    <div class="cb-head" data-toggle="qualified">${chev}<span class="cb-title">Qualified Experience<span class="sub" id="qualifiedSub"></span></span></div>
-    <div class="cb-body">
-      <div class="cb-group"><div class="cb-grid">${f('name','Internal Experience Name',{hint:'(auto — editable)',wide:true})}${f('segment','Page or Audience Segment',{wide:true,type:'textarea',ph:'Which page or audience segment this experience targets'})}</div></div>
-      <div class="cb-group"><div class="cb-glabel">Experience copy</div><div class="cb-grid">${f('headline','Headline',{wide:true})}${f('body','Body Copy',{wide:true,type:'textarea'})}${f('imageUrl','Image & Image URL',{wide:true,ph:'https://…'})}${f('subtext','Subtext Below Image',{wide:true})}${f('ctas','CTA Buttons',{hint:'(one per line)',wide:true,type:'textarea',ph:'Book a meeting\nConnect with an expert\nGet Pricing'})}</div></div>
-    </div>
-  </section>`;
-  const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='· '+effQualifiedName();
-}
-function renderCampaign(){
-  const c=state.campaign,open=state.campaign.open;
-  document.getElementById('campaignCard').innerHTML=
-    `<section class="cb-card ${open?'':'collapsed'}" data-card="campaign">
-      <div class="cb-head" data-toggle="campaign">${chev}<span class="cb-title">Campaign<span class="sub" id="campaignSub"></span></span></div>
-      <div class="cb-body"><div class="cb-group"><div class="cb-grid">
-        ${campaignFields.map(f=>fieldHtml(f,c[f.k],'c.'+f.k)).join('')}
-      </div></div></div>
-    </section>`;
-}
-function renderEmails(){
-  document.getElementById('emails').innerHTML=state.emails.map((e,i)=>{
-    const groups=emailGroups.map(g=>{const fs=g.fields.filter(f=>!(f.onlyIfOrder&&!e.hasOrder));return `<div class="cb-group"><div class="cb-glabel">${g.title}</div><div class="cb-grid">${fs.map(f=>fieldHtml(f,f.k==='pardotName'?effPardot(i):e[f.k],`e.${i}.${f.k}`)).join('')}</div></div>`;}).join('');
-    return `<section class="cb-card ${e.open?'':'collapsed'}" data-card="${i}">
-      <div class="cb-head" data-toggle="${i}">${chev}<span class="cb-title"><span data-emailtitle="${i}"></span><span class="sub" data-emailsub="${i}"></span></span>
-        <span class="cb-acts"><button class="iconbtn" data-dup="${i}">Duplicate</button>${state.emails.length>1?`<button class="iconbtn danger" data-del="${i}">Remove</button>`:''}</span></div>
-      <div class="cb-body">${groups}
-        <div class="cb-out">
-          <div class="cb-out-lbl">Tags <span class="cb-count" data-tcount="${i}"></span> <button class="cb-copy sm" data-copytags="${i}">Copy all</button></div>
-          <div class="cb-tags" data-tags="${i}"></div>
-        </div>
-      </div>
-    </section>`;
-  }).join('');
-  state.emails.forEach((e,i)=>updateCardOutput(i));
-}
-function updateCardOutput(i){
-  const e=state.emails[i];
-  if(!e.pardotEdited){const auto=computeEmail(i).pardotName;e.pardotName=auto;const inp=document.querySelector(`[data-k="e.${i}.pardotName"]`);if(inp&&document.activeElement!==inp)inp.value=auto;}
-  const sub=document.querySelector(`[data-emailsub="${i}"]`);if(sub)sub.textContent='· '+effPardot(i);
-  const ttl=document.querySelector(`[data-emailtitle="${i}"]`);if(ttl){const aud=e.audience?revLabel(AUDIENCE,e.audience):'';ttl.textContent=aud?('Email - '+aud):('Email '+(i+1));}
-  const r=computeEmail(i);
-  const tw=document.querySelector(`[data-tags="${i}"]`);
-  if(tw){const order=['Campaign','Send Type','Content Type','Audience','Theme','CTA'];const byCat={};r.tags.forEach(x=>{(byCat[x.c]=byCat[x.c]||[]).push(x);});
-    tw.innerHTML=order.filter(c=>byCat[c]&&byCat[c].length).map(c=>`<div class="cb-taggroup"><span class="cb-tagcat">${c}</span><div class="cb-tagchips">${byCat[c].map(x=>`<span class="cb-tag${x.req?' req':''}" title="${c}${x.src==='reg'?' · from registry':' · from build doc'}">${escH(x.t)}<span class="src${x.src==='reg'?' reg':''}">${x.src==='reg'?'reg':'doc'}</span></span>`).join('')}</div></div>`).join('');}
-  const tc=document.querySelector(`[data-tcount="${i}"]`);if(tc)tc.textContent='· '+r.tags.length;
-  window['_tags'+i]=r.tags.map(x=>x.t);
-}
-function updateAllOutputs(){state.emails.forEach((e,i)=>updateCardOutput(i));updateRegMatch();updateFormName();if(state.cadence)updateCadenceName();if(state.qualified)updateQualifiedName();updateCrmLine();}
-function updateRegMatch(){const reg=findCampaign(state.campaign.name);const sub=document.getElementById('campaignSub');if(sub)sub.textContent=reg?'· registry match':'';}
-function updateStatus(){
-  const inc=state.include;const bits=[];
-  if(inc.email)bits.push(`<b>${state.emails.length}</b> email send${state.emails.length!==1?'s':''}`);
-  if(inc.form)bits.push('<b>Pardot form</b>');
-  if(inc.cadence)bits.push('<b>SalesLoft cadence</b>');
-  if(inc.qualified)bits.push('<b>Qualified experience</b>');
-  if(!bits.length)bits.push('nothing selected');
-  const miss=missingRequired();
-  document.getElementById('status').innerHTML=bits.join(' · ')+' · '+
-    (miss.length?`<span class="warn">${miss.length} required field${miss.length!==1?'s':''} blank</span>`:`<span class="ok">required fields complete</span>`);
-}
-function missingRequired(){const m=[];const c=state.campaign;const inc=state.include;
-  if(inc.email||inc.form||inc.cadence||inc.qualified){if(!c.name.trim())m.push('Campaign Name');if(!c.quarter)m.push('Quarter');if(!c.year)m.push('Year');}
-  if(inc.email)state.emails.forEach((e,i)=>{[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(([k,l])=>{if(!String(e[k]||'').trim())m.push('Email '+(i+1)+': '+l);});});
-  return m;}
+/* ===== render(208-441) & events(608-end) removed; replaced by redesigned UI below ===== */
 
 //// ============ IMPORT — read a generated/edited .docx back into state ============
 // Works on docs produced by this builder, including after a Google Docs round-trip
@@ -605,158 +375,447 @@ function cbDownloadDraft(){
 function cbLoadDraftFile(file){var r=new FileReader();r.onload=function(){try{var obj=JSON.parse(r.result);var ns=obj&&obj.state?obj.state:obj;if(cbRestoreState(ns)){cbRepaint();cbSaveNow();toast('Draft loaded');}else toast('That file isn\u2019t a builder draft');}catch(e){toast('Could not read that draft file');}};r.readAsText(file);}
 function cbStartFresh(){if(!confirm('Clear the current build and the saved draft, and start fresh?'))return;cbClearDraft();state.include={email:true,form:false,cadence:false,qualified:false};state.campaign={name:'',crm:'',quarter:'',year:'',open:true};state.emails.length=0;state.emails.push(newEmail());state.form=null;state.cadence=null;state.qualified=null;cbRepaint();cbClearDraft();toast('Started fresh');}
 
-//// ============ EVENTS ============
-document.addEventListener('input',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
-  cbScheduleSave();
-  const rte=ev.target.getAttribute&&ev.target.getAttribute('data-rte');
-  if(rte){setRte(rte,ev.target.innerHTML);return;}
-  const ff=ev.target.getAttribute&&ev.target.getAttribute('data-ff');
-  if(ff!==null&&ff!==undefined&&ev.target.classList.contains('ff-label')){state.form.fields[+ff].label=ev.target.value;return;}
-  const k=ev.target.getAttribute('data-k');if(!k)return;
-  if(ev.target.type==='checkbox')return;
-  if(k.startsWith('c.')){state.campaign[k.slice(2)]=ev.target.value;updateAllOutputs();updateStatus();}
-  else if(k.startsWith('e.')){const p=k.split('.');const i=+p[1];const key=p[2];
-    if(key==='pardotName'){const v=ev.target.value;state.emails[i].pardotName=v;state.emails[i].pardotEdited=v.trim()!=='';
-      if(!state.emails[i].pardotEdited)updateCardOutput(i);
-      const sub=document.querySelector(`[data-emailsub="${i}"]`);if(sub)sub.textContent='· '+effPardot(i);return;}
-    state.emails[i][key]=ev.target.value;updateCardOutput(i);updateStatus();}
-  else if(k.startsWith('f.')){const key=k.slice(2);
-    if(key==='name'){const v=ev.target.value;state.form.name=v;state.form.nameEdited=v.trim()!=='';if(!state.form.nameEdited)updateFormName();const sub=document.getElementById('formSub');if(sub)sub.textContent='· '+effFormName();return;}
-    state.form[key]=ev.target.value;}
-  else if(k.startsWith('cad.')){const rest=k.slice(4);
-    if(rest==='name'){const v=ev.target.value;state.cadence.name=v;state.cadence.nameEdited=v.trim()!=='';if(!state.cadence.nameEdited)updateCadenceName();const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='· '+effCadenceName();return;}
-    const p=rest.split('.');state.cadence.steps[+p[0]][p[1]]=ev.target.value;}
-  else if(k.startsWith('q.')){const key=k.slice(2);
-    if(key==='name'){const v=ev.target.value;state.qualified.name=v;state.qualified.nameEdited=v.trim()!=='';if(!state.qualified.nameEdited)updateQualifiedName();const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='· '+effQualifiedName();return;}
-    state.qualified[key]=ev.target.value;}
-});
-document.addEventListener('change',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
-  cbScheduleSave();
-  const ffr=ev.target.getAttribute&&ev.target.getAttribute('data-ffreq');if(ffr!==null&&ffr!==undefined){state.form.fields[+ffr].req=ev.target.checked;return;}
-  const ffc=ev.target.getAttribute&&ev.target.getAttribute('data-ffcustom');if(ffc!==null&&ffc!==undefined){state.form.fields[+ffc].custom=ev.target.checked;return;}
-  const k=ev.target.getAttribute('data-k');if(!k)return;
-  if(ev.target.type==='checkbox'&&k.startsWith('e.')){const p=k.split('.');const i=+p[1];state.emails[i][p[2]]=ev.target.checked;renderEmails();updateStatus();return;}
-  if(k.startsWith('c.')){state.campaign[k.slice(2)]=ev.target.value;updateAllOutputs();updateStatus();}
-  else if(k.startsWith('e.')){const p=k.split('.');const i=+p[1];if(p[2]==='pardotName')return;state.emails[i][p[2]]=ev.target.value;updateCardOutput(i);updateStatus();}
-  else if(k.startsWith('f.')){const key=k.slice(2);state.form[key]=ev.target.value;}
-});
-document.addEventListener('keydown',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;const k=ev.target.getAttribute&&ev.target.getAttribute('data-addtoken');if(k&&ev.key==='Enter'){ev.preventDefault();addToken(k);}});
-function addToken(key){const inp=document.querySelector(`[data-addtoken="${key}"]`);if(!inp)return;const v=inp.value.trim();if(!v)return;const p=key.split('.');const i=+p[1];state.emails[i][p[2]].push(v);renderEmails();}
-/* ── Audience picker (Lists / Send To): backed by newline-joined string e.lists ── */
-function audItems(i){var s=state.emails[i].lists;return s?String(s).split('\n').map(function(x){return x.trim();}).filter(Boolean):[];}
-function audAdd(key,val){val=(val||'').trim();if(!val)return;var i=+key.split('.')[1];var arr=audItems(i);if(arr.indexOf(val)<0){arr.push(val);state.emails[i].lists=arr.join('\n');}renderEmails();}
-function audRemove(key,j){var i=+key.split('.')[1];var arr=audItems(i);arr.splice(j,1);state.emails[i].lists=arr.join('\n');renderEmails();}
-function audFilter(key){
-  var inp=document.querySelector(`[data-audsearch="${key}"]`);var dd=document.querySelector(`[data-auddd="${key}"]`);if(!inp||!dd)return;
-  var q=inp.value.trim().toLowerCase();
-  if(!q){dd.style.display='none';dd.innerHTML='';return;}
-  var i=+key.split('.')[1];var have=audItems(i);var matches=[];
-  for(var n=0;n<CB_LISTS.length&&matches.length<40;n++){var nm=CB_LISTS[n];if(nm.toLowerCase().indexOf(q)>=0&&have.indexOf(nm)<0)matches.push(nm);}
-  if(!matches.length){dd.innerHTML='<div style="padding:8px 11px;font-size:12.5px;color:var(--ed-mono,#5B6675)">No match \u2014 press Enter to add \u201c'+escH(inp.value.trim())+'\u201d</div>';dd.style.display='block';return;}
-  dd.innerHTML=matches.map(function(nm){return '<div data-audpick="'+key+'" style="padding:8px 11px;cursor:pointer;font-size:13px;border-bottom:1px solid #f2efe7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escH(nm)+'</div>';}).join('');
-  dd.style.display='block';
+
+/* ===================== REDESIGNED UI LAYER (two-pane) =====================
+   Reuses the engine above verbatim: state, computeEmail, effPardot, buildDocx,
+   import parser, draft autosave. Only the view + event wiring is new. The data
+   object handed to buildDocx is assembled exactly as the original did, so the
+   generated Word doc is byte-for-byte identical. ROOT id is #cb-app. */
+
+var ROOT='p-builder';
+var active={type:'campaign', i:0};
+var lstQuery='';            /* current list-search text for the active email */
+function R(){return document.getElementById(ROOT);}
+
+/* ---- small helpers ---- */
+function escH(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function aesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function prefix(){var c=state.campaign;return isEvergreen()?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');}
+function autoFormName(){return prefix()+(cleanName(state.campaign.name)||'Campaign name');}
+function autoCadenceName(){return autoFormName();}
+function autoQualifiedName(){return autoFormName();}
+function effFormName(){var f=state.form;return f&&f.nameEdited?(f.name||''):autoFormName();}
+function effCadenceName(){var c=state.cadence;return c&&c.nameEdited?(c.name||''):autoCadenceName();}
+function effQualifiedName(){var q=state.qualified;return q&&q.nameEdited?(q.name||''):autoQualifiedName();}
+function updateFormName(){var f=state.form;if(f&&!f.nameEdited)f.name='';}
+function updateCadenceName(){var c=state.cadence;if(c&&!c.nameEdited)c.name='';}
+function updateQualifiedName(){var q=state.qualified;if(q&&!q.nameEdited)q.name='';}
+function updateCrmLine(){}
+function setRte(key,html){var p=key.split('.');if(p[0]==='e')state.emails[+p[1]].body=html;else if(p[0]==='f')state.form[p[1]]=html;}
+
+/* ---- required-field tracking ---- */
+function missingRequired(){var m=[];var c=state.campaign;var inc=state.include;
+  if(inc.email||inc.form||inc.cadence||inc.qualified){if(!c.name.trim())m.push('Campaign Name');if(!c.quarter)m.push('Quarter');if(!c.year)m.push('Year');}
+  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push('Email '+(i+1)+' · '+p[1]);});});
+  return m;}
+function emailComplete(i){var e=state.emails[i];return ['emailType','contentType','audience','theme','subjectA'].every(function(k){return String(e[k]||'').trim();});}
+
+/* ---- list (Send To) selector: word-based ranked match over CB_LISTS ---- */
+function listItems(i){var s=state.emails[i].lists;return s?String(s).split('\n').map(function(x){return x.trim();}).filter(Boolean):[];}
+function listSet(i,arr){state.emails[i].lists=arr.join('\n');}
+function listToggle(i,name){var arr=listItems(i);var idx=arr.indexOf(name);if(idx>=0)arr.splice(idx,1);else arr.push(name);listSet(i,arr);}
+function listRemove(i,name){var arr=listItems(i).filter(function(x){return x!==name;});listSet(i,arr);}
+function rankLists(query){
+  var q=query.trim().toLowerCase();
+  if(!q)return CB_LISTS.slice(0,60).map(function(n){return {n:n,score:0};});
+  var toks=q.split(/\s+/).filter(Boolean);
+  var out=[];
+  for(var i=0;i<CB_LISTS.length;i++){
+    var name=CB_LISTS[i], low=name.toLowerCase();
+    var ok=true;for(var t=0;t<toks.length;t++){if(low.indexOf(toks[t])<0){ok=false;break;}}
+    if(!ok)continue;
+    var score=0;
+    if(low===q)score+=400;
+    if(low.indexOf(q)===0)score+=160;            /* whole query is a prefix */
+    if(low.indexOf(q)>=0)score+=80;              /* whole query appears contiguously */
+    for(var t2=0;t2<toks.length;t2++){           /* token-as-word bonus */
+      if(new RegExp('\\b'+toks[t2].replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(low))score+=12;
+    }
+    score-=Math.min(40,Math.floor(low.length/6)); /* prefer shorter names */
+    out.push({n:name,score:score});
+  }
+  out.sort(function(a,b){return b.score-a.score||(a.n<b.n?-1:1);});
+  return out;
 }
-document.addEventListener('input',function(ev){if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;var ak=ev.target.getAttribute&&ev.target.getAttribute('data-audsearch');if(ak)audFilter(ak);});
-document.addEventListener('keydown',function(ev){if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;var ak=ev.target.getAttribute&&ev.target.getAttribute('data-audsearch');if(ak&&ev.key==='Enter'){ev.preventDefault();audAdd(ak,ev.target.value);}});
-function setRte(key,html){const p=key.split('.');if(p[0]==='e')state.emails[+p[1]].body=html;else if(p[0]==='f')state.form[p[1]]=html;}
-document.addEventListener('mousedown',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;if(ev.target.closest('.rte-btn'))ev.preventDefault();});
-document.addEventListener('click',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
-  cbScheduleSave();
-  const rbtn=ev.target.closest('.rte-btn');
-  if(rbtn){const cmd=rbtn.getAttribute('data-cmd');const tools=rbtn.closest('[data-rte-tools]');const key=tools.getAttribute('data-rte-tools');const ed=document.querySelector(`[data-rte="${key}"]`);
-    if(ed){ed.focus();if(cmd==='createLink'){const url=prompt('Link URL:','https://');if(url)document.execCommand('createLink',false,url);}else{document.execCommand(cmd,false,null);}setRte(key,ed.innerHTML);}return;}
-  const opt=ev.target.closest('.cb-opt');
-  if(opt){const wrap=opt.closest('[data-k]');const k=wrap.getAttribute('data-k');const p=k.split('.');const i=+p[1];const tag=opt.getAttribute('data-tag');
-    const arr=state.emails[i].cta;const idx=arr.indexOf(tag);if(idx>=0)arr.splice(idx,1);else arr.push(tag);opt.classList.toggle('on');updateCardOutput(i);return;}
-  const rmt=ev.target.closest('[data-rmtoken]');if(rmt){const parts=rmt.getAttribute('data-rmtoken').split('|');const p=parts[0].split('.');const i=+p[1];state.emails[i][p[2]].splice(+parts[1],1);renderEmails();return;}
-  const apick=ev.target.closest('[data-audpick]');if(apick){audAdd(apick.getAttribute('data-audpick'),apick.textContent);return;}
-  const rma=ev.target.closest('[data-rmaud]');if(rma){const parts=rma.getAttribute('data-rmaud').split('|');audRemove(parts[0],+parts[1]);return;}
-  const addb=ev.target.closest('[data-addbtn]');if(addb){addToken(addb.getAttribute('data-addbtn'));return;}
-  const dup=ev.target.closest('[data-dup]');if(dup){const i=+dup.getAttribute('data-dup');const copy=JSON.parse(JSON.stringify(state.emails[i]));copy.open=true;copy.number='';state.emails.splice(i+1,0,copy);renderEmails();updateStatus();return;}
-  const del=ev.target.closest('[data-del]');if(del){const i=+del.getAttribute('data-del');state.emails.splice(i,1);renderEmails();updateStatus();return;}
-  const sc=ev.target.closest('[data-scope]');if(sc){const key=sc.getAttribute('data-scope');state.include[key]=!state.include[key];renderScope();showModules();updateStatus();return;}
-  const ffadd=ev.target.closest('[data-ffadd]');if(ffadd){state.form.fields.push({label:'',req:false,custom:true});renderForm();return;}
-  const ffdel=ev.target.closest('[data-ffdel]');if(ffdel){state.form.fields.splice(+ffdel.getAttribute('data-ffdel'),1);renderForm();return;}
-  const ct=ev.target.closest('[data-copytags]');if(ct){const i=ct.getAttribute('data-copytags');copyText((window['_tags'+i]||[]).join(', '),ct);return;}
-  const csa=ev.target.closest('[data-cadstepadd]');if(csa){state.cadence.steps.push({subject:'',body:''});renderCadence();return;}
-  const csd=ev.target.closest('[data-cadstepdel]');if(csd){state.cadence.steps.splice(+csd.getAttribute('data-cadstepdel'),1);renderCadence();return;}
-  const tog=ev.target.closest('[data-toggle]');
-  if(tog){const id=tog.getAttribute('data-toggle');const card=tog.closest('.cb-card');card.classList.toggle('collapsed');const collapsed=card.classList.contains('collapsed');
-    if(id==='campaign')state.campaign.open=!collapsed;else if(id==='form')state.form.open=!collapsed;else if(id==='cadence')state.cadence.open=!collapsed;else if(id==='qualified')state.qualified.open=!collapsed;else state.emails[+id].open=!collapsed;return;}
+function hlite(name,query){
+  var q=query.trim();if(!q)return escH(name);
+  var toks=q.toLowerCase().split(/\s+/).filter(Boolean).sort(function(a,b){return b.length-a.length;});
+  var safe=escH(name), low=name.toLowerCase(), marks=new Array(name.length).fill(false);
+  toks.forEach(function(tk){var from=0,idx;while((idx=low.indexOf(tk,from))>=0){for(var k=idx;k<idx+tk.length;k++)marks[k]=true;from=idx+tk.length;}});
+  /* rebuild against escaped string is messy; do a simple span wrap on raw then escape pieces */
+  var res='',run='',on=false;
+  for(var i=0;i<name.length;i++){
+    if(marks[i]!==on){res+=on?('<b>'+escH(run)+'</b>'):escH(run);run='';on=marks[i];}
+    run+=name[i];
+  }
+  res+=on?('<b>'+escH(run)+'</b>'):escH(run);
+  return res;
+}
+function listSelectorHtml(i){
+  var have=listItems(i);
+  var chips=have.length?have.map(function(n){return '<span class="cb-chip">'+escH(n)+'<button data-lstrm="'+aesc(n)+'" title="Remove" aria-label="Remove">\u00d7</button></span>';}).join(''):'<span class="muted">No lists yet \u2014 search below.</span>';
+  var ranked=rankLists(lstQuery);
+  var total=ranked.length, shown=ranked.slice(0,60);
+  var rows=shown.map(function(r){var sel=have.indexOf(r.n)>=0;return '<div class="lst-row'+(sel?' sel':'')+'" data-lst="'+aesc(r.n)+'"><span class="lst-box">'+(sel?'\u2713':'')+'</span><span class="lst-name">'+hlite(r.n,lstQuery)+'</span></div>';}).join('');
+  var note;
+  if(!lstQuery.trim())note=have.length+' selected \u00b7 browsing '+shown.length+' of '+CB_LISTS.length;
+  else if(!total)note='No match \u2014 press Enter to add \u201c'+escH(lstQuery.trim())+'\u201d as a custom list';
+  else note='showing '+shown.length+' of '+total+' matches';
+  return '<div class="cbf wide">'
+    +'<label class="cbl">Lists (send to)</label>'
+    +'<div class="cb-chips cb-chips-box">'+chips+'</div>'
+    +'<div class="lst-wrap">'
+      +'<input class="lst-search" id="cb-lstsearch" data-lstsearch placeholder="Search 3,500 lists by word\u2026" value="'+aesc(lstQuery)+'" autocomplete="off">'
+      +'<div class="lst-panel">'+(rows||'')+'</div>'
+      +'<div class="lst-note">'+note+'</div>'
+    +'</div></div>';
+}
+
+/* ---- generic field renderer ---- */
+function fld(def,val,key){
+  var l=def.l?('<label class="cbl">'+def.l+(def.req?'<i class="rq">*</i>':'')+(def.hint?' <span class="hint">'+def.hint+'</span>':'')+'</label>'):'';
+  var ctrl;
+  if(def.type==='check'){
+    return '<label class="cbk"><input type="checkbox" data-k="'+key+'" '+(val?'checked':'')+'><span>'+def.l+(def.hint?' <span class="hint">'+def.hint+'</span>':'')+'</span></label>';
+  } else if(def.type==='select'){
+    var opts=(def.opts||[]).map(function(o){return '<option value="'+aesc(o[1])+'"'+(o[1]===val?' selected':'')+'>'+escH(o[0])+'</option>';}).join('');
+    ctrl='<select data-k="'+key+'">'+(def.noEmpty?'':'<option value="">'+(def.none||'\u2014 select \u2014')+'</option>')+opts+'</select>';
+  } else if(def.type==='textarea'){
+    ctrl='<textarea data-k="'+key+'" class="'+(def.tall?'tall':'')+'" placeholder="'+aesc(def.ph||'')+'">'+escH(val||'')+'</textarea>';
+  } else if(def.type==='rte'){
+    ctrl='<div class="rte-tools" data-rte-tools="'+key+'">'
+      +'<button type="button" class="rb" data-cmd="bold"><b>B</b></button>'
+      +'<button type="button" class="rb" data-cmd="italic"><i>I</i></button>'
+      +'<button type="button" class="rb" data-cmd="underline"><u>U</u></button>'
+      +'<button type="button" class="rb" data-cmd="insertUnorderedList">&bull; List</button>'
+      +'<button type="button" class="rb" data-cmd="insertOrderedList">1. List</button>'
+      +'<button type="button" class="rb" data-cmd="createLink">Link</button>'
+      +'<button type="button" class="rb" data-cmd="removeFormat">Clear</button></div>'
+      +'<div class="rte" contenteditable="true" data-rte="'+key+'" data-ph="'+aesc(def.ph||'')+'">'+(val||'')+'</div>';
+  } else if(def.type==='chips'){
+    ctrl='<div class="cb-chips" data-cta="'+key+'">'+(def.opts||[]).map(function(o){return '<span class="cb-opt'+(((val||[]).indexOf(o[1])>=0)?' on':'')+'" data-tag="'+aesc(o[1])+'">'+escH(o[0])+'</span>';}).join('')+'</div>';
+  } else if(def.type==='tokens'){
+    var arr=val||[];
+    ctrl='<div class="cb-chips cb-chips-box">'+arr.map(function(t,j){return '<span class="cb-chip">'+escH(t)+'<button data-suprm="'+key+'|'+j+'" title="Remove">\u00d7</button></span>';}).join('')
+      +'<span class="tok-add"><input data-supinput="'+key+'" placeholder="'+aesc(def.ph||'Add\u2026')+'" autocomplete="off"><button type="button" data-supadd="'+key+'">Add</button></span></div>';
+  } else if(def.type==='date'){
+    ctrl='<input type="date" data-k="'+key+'" value="'+aesc(val||'')+'">';
+  } else if(def.type==='time'){
+    ctrl='<input list="cb-timeopts" data-k="'+key+'" value="'+aesc(val||'')+'" placeholder="'+aesc(def.ph||'')+'" autocomplete="off">';
+  } else {
+    ctrl='<input data-k="'+key+'" value="'+aesc(val||'')+'" placeholder="'+aesc(def.ph||'')+'">';
+  }
+  return '<div class="cbf '+(def.wide?'wide':'')+'">'+l+ctrl+'</div>';
+}
+function group(title,inner){return '<div class="grp">'+(title?'<div class="grp-h">'+title+'</div>':'')+'<div class="grid">'+inner+'</div></div>';}
+
+/* ===================== EDITORS ===================== */
+function editorCampaign(){
+  var c=state.campaign;
+  var reg=findCampaign(c.name);
+  var inner=fld({l:'Campaign Name',req:true,wide:true,ph:'Imaging Service'},c.name,'c.name')
+    +fld({l:'CRM Campaign Link',wide:true,ph:'https://scalecomputing.lightning.force.com/...'},c.crm,'c.crm')
+    +fld({l:'Quarter',req:true,type:'select',opts:QUARTERS},c.quarter,'c.quarter')
+    +fld({l:'Year',req:true,type:'select',opts:YEARS},c.year,'c.year');
+  var match=reg?'<div class="reg-ok">Registry match \u00b7 tag <code>'+escH(reg.tag)+'</code>'+(reg.salesloft?' \u00b7 SalesLoft-enabled':'')+'</div>':'<div class="reg-no">No registry match \u2014 a slug tag will be generated from the name.</div>';
+  return '<h2>Campaign</h2><p class="sub">Shared by every send, form, and cadence in this build.</p>'+group('',inner)+match;
+}
+function editorEmail(i){
+  var e=state.emails[i];
+  var tagging=fld({l:'Pardot Email Name',hint:'(auto \u2014 editable)',wide:true,ph:'Q2-2026 | Campaign | Email 1'},e.pardotEdited?(e.pardotName||''):computeEmail(i).pardotName,'e.'+i+'.pardotName')
+    +fld({l:'This send has an email order #',type:'check'},e.hasOrder,'e.'+i+'.hasOrder')
+    +(e.hasOrder?fld({l:'Email #',ph:'1'},e.number,'e.'+i+'.number'):'')
+    +fld({l:'Email Type',req:true,type:'select',opts:SENDTYPE},e.emailType,'e.'+i+'.emailType')
+    +fld({l:'Content Type',req:true,type:'select',opts:CONTENT},e.contentType,'e.'+i+'.contentType')
+    +fld({l:'Audience',req:true,type:'select',opts:AUDIENCE},e.audience,'e.'+i+'.audience')
+    +fld({l:'Theme',req:true,type:'select',opts:THEME},e.theme,'e.'+i+'.theme')
+    +fld({l:'A/B Test',type:'select',opts:AB,noEmpty:true},e.ab,'e.'+i+'.ab')
+    +fld({l:'CTA',type:'chips',opts:CTAOPTS,wide:true},e.cta,'e.'+i+'.cta');
+  var fan='<div class="fan wide"><div class="fan-h">Create audience variants of this send</div>'
+    +'<div class="cb-chips">'+AUDIENCE.map(function(a){return '<span class="cb-opt" data-fanaud="'+aesc(a[1])+'">'+escH(a[0])+'</span>';}).join('')+'</div>'
+    +'<button type="button" class="mini" data-fanout="'+i+'">Generate selected variants \u2192</button>'
+    +'<span class="fan-note">Each variant is a new send with the audience set and a distinct Pardot name (\u2026 | Audience). Your current send is unchanged.</span></div>';
+  var to=listSelectorHtml(i)+fld({l:'Suppression Lists',wide:true,type:'tokens',ph:'Add a suppression list\u2026'},e.suppressionList,'e.'+i+'.suppressionList');
+  var from=fld({l:'Sender Name',ph:'Scale Computing'},e.senderName,'e.'+i+'.senderName')
+    +fld({l:'From Email',ph:'noreply@scalecomputing.com'},e.fromEmail,'e.'+i+'.fromEmail')
+    +fld({l:'Reply-To',wide:true,ph:'noreply@scalecomputing.com'},e.replyTo,'e.'+i+'.replyTo');
+  var subj=fld({l:'Subject Line A',req:true,wide:true},e.subjectA,'e.'+i+'.subjectA')
+    +fld({l:'Subject Line B',hint:'(if A/B)',wide:true},e.subjectB,'e.'+i+'.subjectB')
+    +fld({l:'Preview Copy',wide:true,type:'textarea'},e.preview,'e.'+i+'.preview');
+  var sched=fld({l:'Send Date',type:'date'},e.sendDate,'e.'+i+'.sendDate')
+    +fld({l:'Send Time',hint:'(15-min steps)',type:'time',ph:'10:00 AM EST'},e.sendTime,'e.'+i+'.sendTime');
+  var build=fld({l:'Hero Image URL',wide:true,ph:'https://info.scalecomputing.com/...'},e.hero,'e.'+i+'.hero')
+    +fld({l:'Body Copy',hint:'(rich text)',wide:true,type:'rte',ph:'Write the email body\u2026'},e.body,'e.'+i+'.body')
+    +fld({l:'Main CTA \u2014 button / link',wide:true,ph:'[Get Pricing] \u2192 https://www.scalecomputing.com/pricing'},e.mainCta,'e.'+i+'.mainCta')
+    +fld({l:'Secondary CTA \u2014 copy',hint:'(optional)',wide:true,type:'textarea'},e.secCtaCopy,'e.'+i+'.secCtaCopy')
+    +fld({l:'Secondary CTA \u2014 button / link',wide:true,ph:'[Schedule a Demo] \u2192 https://...'},e.secCta,'e.'+i+'.secCta');
+  var head='<div class="ed-head"><h2>'+escH(emailTitle(i))+'</h2>'
+    +'<div class="ed-acts"><button type="button" class="mini" data-dup="'+i+'">Duplicate</button>'
+    +(state.emails.length>1?'<button type="button" class="mini danger" data-del="'+i+'">Remove</button>':'')+'</div></div>';
+  return head
+    +group('Tagging \u2014 feeds the tag builder',tagging)
+    +fan
+    +group('To \u2014 audience &amp; lists',to)
+    +group('From \u2014 sender',from)
+    +group('Subject',subj)
+    +group('Schedule',sched)
+    +group('Email build',build);
+}
+function editorForm(){
+  var f=state.form;if(!f)return '';
+  var top=fld({l:'Pardot Form Name',hint:'(auto \u2014 editable)',wide:true},effFormName(),'f.name');
+  var link=fld({l:'Form Preview Link',wide:true,ph:'https://info.scalecomputing.com/l/...'},f.previewLink,'f.previewLink')
+    +fld({l:'iFrame Code',wide:true,type:'textarea'},f.iframe,'f.iframe');
+  var fieldsRows=f.fields.map(function(fl,j){return '<div class="ff-row"><input class="ff-label" data-ff="'+j+'" value="'+aesc(fl.label||'')+'" placeholder="Field label\u2026">'
+    +'<label class="ff-chk"><input type="checkbox" data-ffreq="'+j+'" '+(fl.req?'checked':'')+'>Req</label>'
+    +'<label class="ff-chk"><input type="checkbox" data-ffcustom="'+j+'" '+(fl.custom?'checked':'')+'>Custom</label>'
+    +'<button class="ff-del" data-ffdel="'+j+'" title="Remove">\u00d7</button></div>';}).join('');
+  var fieldsGrp='<div class="grp"><div class="grp-h">Form fields</div><div class="ff-list">'+fieldsRows+'<button type="button" class="mini" data-ffadd>+ Add field</button></div></div>';
+  var comp=fld({l:'Source'},f.source,'f.source')+fld({l:'Detailed Lead Source'},f.leadSource,'f.leadSource')
+    +fld({l:'Notify Slack Channel'},f.slack,'f.slack')
+    +fld({l:'Send Email (Autoresponder)',wide:true,ph:'Autoresponder email name / link'},f.autoresponder,'f.autoresponder')
+    +fld({l:'Display Message',wide:true,type:'textarea'},f.displayMsg,'f.displayMsg')
+    +'<div class="cbf wide"><label class="cbl">Add to CRM Campaign <span class="hint">(from campaign)</span></label><div class="ro">'+escH(state.campaign.name||'\u2014')+'</div></div>'
+    +'<div class="cbf wide"><label class="cbl">CRM Campaign Link <span class="hint">(from campaign)</span></label><div class="ro">'+escH(state.campaign.crm||'\u2014')+'</div></div>';
+  var tc='<div class="grp"><div class="grp-h">Terms &amp; conditions</div><div class="grid">'+fld({wide:true,type:'rte',ph:'Enter terms & conditions\u2026'},f.tc,'f.tc')+'</div></div>';
+  return '<h2>Pardot Form</h2><p class="sub">'+escH(effFormName())+'</p>'+group('',top)+fieldsGrp+group('Link &amp; embed',link)+group('Completion actions',comp)+tc;
+}
+function editorCadence(){
+  var c=state.cadence;if(!c)return '';
+  var name=group('',fld({l:'Internal Flow Name',hint:'(auto \u2014 editable)',wide:true},effCadenceName(),'cad.name'));
+  var steps=c.steps.map(function(stp,i){return '<div class="grp"><div class="grp-h">Email step '+(i+1)+(c.steps.length>1?' <button class="ff-del" data-cadstepdel="'+i+'" title="Remove">\u00d7</button>':'')+'</div><div class="grid">'
+    +fld({l:'Subject Line',wide:true},stp.subject,'cad.'+i+'.subject')
+    +fld({l:'Body Copy',wide:true,type:'textarea'},stp.body,'cad.'+i+'.body')+'</div></div>';}).join('');
+  return '<h2>SalesLoft Cadence</h2><p class="sub">'+escH(effCadenceName())+'</p>'+name+steps+'<button type="button" class="mini" data-cadstepadd>+ Add email step</button>';
+}
+function editorQualified(){
+  var q=state.qualified;if(!q)return '';
+  var inner=fld({l:'Internal Experience Name',hint:'(auto \u2014 editable)',wide:true},effQualifiedName(),'q.name')
+    +fld({l:'Page or Audience Segment',wide:true,type:'textarea',ph:'Who sees this experience\u2026'},q.segment,'q.segment');
+  var copy=fld({l:'Headline',wide:true},q.headline,'q.headline')
+    +fld({l:'Body Copy',wide:true,type:'textarea'},q.body,'q.body')
+    +fld({l:'Image & Image URL',wide:true,ph:'https://...'},q.imageUrl,'q.imageUrl')
+    +fld({l:'Subtext Below Image',wide:true,type:'textarea'},q.subtext,'q.subtext')
+    +fld({l:'CTA Buttons',wide:true,type:'textarea',ph:'[Get Pricing] \u2192 https://...'},q.ctas,'q.ctas');
+  return '<h2>Qualified Experience</h2><p class="sub">'+escH(effQualifiedName())+'</p>'+group('',inner)+group('Experience copy',copy);
+}
+function emailTitle(i){var e=state.emails[i];var aud=e.audience?revLabel(AUDIENCE,e.audience):'';return aud?('Email '+(i+1)+' \u00b7 '+aud):('Email '+(i+1));}
+
+/* ===================== PANES ===================== */
+function renderScopeRow(){
+  var inc=state.include;
+  var opts=[['email','Email'],['form','Pardot Form'],['cadence','SalesLoft Cadence'],['qualified','Qualified Experience']];
+  var pills=opts.map(function(o){return '<button type="button" class="cb-pill'+(inc[o[0]]?' on':'')+'" data-scope="'+o[0]+'">'+o[1]+'</button>';}).join('');
+  var el=document.getElementById('cb-scope');if(el)el.innerHTML='<span class="scope-l">This build</span>'+pills;
+}
+function treeNode(label,type,i,opts){opts=opts||{};
+  var on=(active.type===type&&(i==null||active.i===i));
+  var done=opts.done?'<span class="dot ok"></span>':(opts.warn?'<span class="dot warn"></span>':'');
+  return '<div class="tn'+(on?' on':'')+(opts.sub?' sub':'')+'" data-node="'+type+(i!=null?'.'+i:'')+'">'+done+'<span class="tn-l">'+escH(label)+'</span></div>';
+}
+function renderTree(){
+  var inc=state.include,h='';
+  h+=treeNode('Campaign','campaign',null,{warn:!(state.campaign.name&&state.campaign.quarter&&state.campaign.year)});
+  if(inc.email){
+    h+='<div class="tn-grp">Email sends</div>';
+    state.emails.forEach(function(e,i){h+=treeNode(emailTitle(i),'email',i,{sub:true,done:emailComplete(i),warn:!emailComplete(i)});});
+    h+='<div class="tn add" data-addemail>+ Add email</div>';
+  }
+  if(inc.form)h+=treeNode('Pardot Form','form',null,{});
+  if(inc.cadence)h+=treeNode('SalesLoft Cadence','cadence',null,{});
+  if(inc.qualified)h+=treeNode('Qualified Experience','qualified',null,{});
+  var el=document.getElementById('cb-tree');if(el)el.innerHTML=h;
+}
+function ensureActiveValid(){
+  if(active.type==='email'&&(!state.include.email||active.i>=state.emails.length))active={type:'campaign'};
+  if(active.type==='form'&&!state.include.form)active={type:'campaign'};
+  if(active.type==='cadence'&&!state.include.cadence)active={type:'campaign'};
+  if(active.type==='qualified'&&!state.include.qualified)active={type:'campaign'};
+}
+function renderEditor(){
+  ensureActiveValid();
+  var html;
+  if(active.type==='email')html=editorEmail(active.i);
+  else if(active.type==='form')html=editorForm();
+  else if(active.type==='cadence')html=editorCadence();
+  else if(active.type==='qualified')html=editorQualified();
+  else html=editorCampaign();
+  var el=document.getElementById('cb-editor');if(el)el.innerHTML=html;
+}
+function renderRail(){
+  var el=document.getElementById('cb-rail');if(!el)return;
+  var h='';
+  if(active.type==='email'){
+    var i=active.i,r=computeEmail(i);
+    var order=['Campaign','Send Type','Content Type','Audience','Theme','CTA'],by={};
+    r.tags.forEach(function(x){(by[x.c]=by[x.c]||[]).push(x);});
+    h+='<div class="rl-sec"><div class="rl-h">Pardot name</div><code class="rl-name">'+escH(effPardot(i))+'</code>'
+      +'<button type="button" class="mini" data-copyname="'+i+'">Copy</button></div>';
+    h+='<div class="rl-sec"><div class="rl-h">Tags <span class="rl-c">'+r.tags.length+'</span> <button type="button" class="mini" data-copytags="'+i+'">Copy all</button></div>';
+    h+=order.filter(function(c){return by[c];}).map(function(c){return '<div class="rl-cat">'+c+'</div><div class="cb-chips cb-sm">'+by[c].map(function(x){return '<span class="cb-tag'+(x.req?' req':'')+'">'+escH(x.t)+'</span>';}).join('')+'</div>';}).join('');
+    h+='</div>';
+    var miss=['emailType','contentType','audience','theme','subjectA'];var labels={emailType:'Email type',contentType:'Content type',audience:'Audience',theme:'Theme',subjectA:'Subject A'};
+    var e=state.emails[i];
+    h+='<div class="rl-sec"><div class="rl-h">Checklist</div>'+miss.map(function(k){var ok=String(e[k]||'').trim();return '<div class="ck '+(ok?'ok':'')+'">'+(ok?'\u2713':'\u25cb')+' '+labels[k]+'</div>';}).join('')
+      +'<div class="ck '+(listItems(i).length?'ok':'')+'">'+(listItems(i).length?'\u2713':'\u25cb')+' Lists added</div></div>';
+    window['_tags'+i]=r.tags.map(function(x){return x.t;});
+  } else {
+    var miss=missingRequired();
+    var inc=state.include,bits=[];
+    if(inc.email)bits.push(state.emails.length+' email send'+(state.emails.length!==1?'s':''));
+    if(inc.form)bits.push('Pardot form');if(inc.cadence)bits.push('SalesLoft cadence');if(inc.qualified)bits.push('Qualified experience');
+    h+='<div class="rl-sec"><div class="rl-h">This build</div>'+(bits.length?bits.map(function(b){return '<div class="ck ok">\u2713 '+escH(b)+'</div>';}).join(''):'<div class="muted">Nothing selected</div>')+'</div>';
+    h+='<div class="rl-sec"><div class="rl-h">Required fields</div>'+(miss.length?('<div class="ck warn">'+miss.length+' still blank</div>'+miss.slice(0,8).map(function(m){return '<div class="ck">\u25cb '+escH(m)+'</div>';}).join('')+(miss.length>8?'<div class="muted">\u2026and '+(miss.length-8)+' more</div>':'')):'<div class="ck ok">\u2713 All complete</div>')+'</div>';
+  }
+  el.innerHTML=h;
+}
+function updateStatus(){
+  var miss=missingRequired();var el=document.getElementById('cb-status');
+  if(el)el.innerHTML=miss.length?('<span class="warn">'+miss.length+' required field'+(miss.length!==1?'s':'')+' blank</span>'):'<span class="ok">Required fields complete</span>';
+}
+
+/* ---- legacy render names used by import/draft code → repaint ---- */
+function repaint(){renderScopeRow();renderTree();renderEditor();renderRail();updateStatus();}
+function renderScope(){renderScopeRow();}
+function showModules(){renderScopeRow();renderTree();renderRail();}
+function renderCampaign(){renderTree();renderEditor();}
+function renderEmails(){renderTree();renderEditor();}
+function renderForm(){renderTree();renderEditor();}
+function renderCadence(){renderTree();renderEditor();}
+function renderQualified(){renderTree();renderEditor();}
+function updateCardOutput(i){if(active.type==='email'&&active.i===i)renderRail();renderTree();}
+function updateAllOutputs(){renderRail();renderTree();}
+function updateRegMatch(){}
+function copyText(t,btn){function done(){if(btn){var o=btn.textContent;btn.textContent='Copied';setTimeout(function(){btn.textContent=o;},1100);}}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done).catch(function(){});else done();}
+function toast(m){var t=document.getElementById('cb-toast');if(!t)return;t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('show');},2600);}
+
+/* ===================== EVENTS ===================== */
+function inApp(ev){return ev.target.closest&&ev.target.closest('#'+ROOT);}
+document.addEventListener('input',function(ev){if(!inApp(ev))return;cbScheduleSave();
+  var t=ev.target;
+  if(t.getAttribute('data-lstsearch')!=null){lstQuery=t.value;var i=active.i;var panel=t.parentNode.querySelector('.lst-panel');var note=t.parentNode.querySelector('.lst-note');
+    var ranked=rankLists(lstQuery),shown=ranked.slice(0,60),have=listItems(i);
+    if(panel)panel.innerHTML=shown.map(function(r){var sel=have.indexOf(r.n)>=0;return '<div class="lst-row'+(sel?' sel':'')+'" data-lst="'+aesc(r.n)+'"><span class="lst-box">'+(sel?'\u2713':'')+'</span><span class="lst-name">'+hlite(r.n,lstQuery)+'</span></div>';}).join('');
+    if(note)note.textContent=!lstQuery.trim()?(have.length+' selected \u00b7 browsing '+shown.length+' of '+CB_LISTS.length):(!ranked.length?('No match \u2014 press Enter to add \u201c'+lstQuery.trim()+'\u201d'):('showing '+shown.length+' of '+ranked.length+' matches'));
+    return;}
+  var rte=t.getAttribute('data-rte');if(rte){setRte(rte,t.innerHTML);return;}
+  var ff=t.getAttribute('data-ff');if(ff!=null&&t.classList.contains('ff-label')){state.form.fields[+ff].label=t.value;renderTree();return;}
+  var k=t.getAttribute('data-k');if(!k||t.type==='checkbox')return;
+  if(k.indexOf('c.')===0){state.campaign[k.slice(2)]=t.value;renderTree();renderRail();updateStatus();}
+  else if(k.indexOf('e.')===0){var p=k.split('.');var i2=+p[1],key=p[2];
+    if(key==='pardotName'){state.emails[i2].pardotName=t.value;state.emails[i2].pardotEdited=t.value.trim()!=='';renderTree();renderRail();return;}
+    state.emails[i2][key]=t.value;if(key==='audience'){}renderRail();renderTree();updateStatus();}
+  else if(k.indexOf('f.')===0){var fk=k.slice(2);if(fk==='name'){state.form.name=t.value;state.form.nameEdited=t.value.trim()!=='';}else state.form[fk]=t.value;}
+  else if(k.indexOf('cad.')===0){var rest=k.slice(4);if(rest==='name'){state.cadence.name=t.value;state.cadence.nameEdited=t.value.trim()!=='';}else{var pp=rest.split('.');state.cadence.steps[+pp[0]][pp[1]]=t.value;}}
+  else if(k.indexOf('q.')===0){var qk=k.slice(2);if(qk==='name'){state.qualified.name=t.value;state.qualified.nameEdited=t.value.trim()!=='';}else state.qualified[qk]=t.value;}
 });
-function copyText(t,btn){function done(){if(btn){btn.classList.add('copied');const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.classList.remove('copied');btn.textContent=o;},1100);}}
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done).catch(()=>{});else done();}
+document.addEventListener('change',function(ev){if(!inApp(ev))return;cbScheduleSave();
+  var t=ev.target;
+  var ffr=t.getAttribute('data-ffreq');if(ffr!=null){state.form.fields[+ffr].req=t.checked;return;}
+  var ffc=t.getAttribute('data-ffcustom');if(ffc!=null){state.form.fields[+ffc].custom=t.checked;return;}
+  var k=t.getAttribute('data-k');if(!k)return;
+  if(t.type==='checkbox'&&k.indexOf('e.')===0){var p=k.split('.');state.emails[+p[1]][p[2]]=t.checked;renderEditor();renderTree();return;}
+  if(k.indexOf('c.')===0){state.campaign[k.slice(2)]=t.value;renderTree();renderRail();updateStatus();}
+  else if(k.indexOf('e.')===0){var p2=k.split('.');if(p2[2]==='pardotName')return;state.emails[+p2[1]][p2[2]]=t.value;renderRail();renderTree();updateStatus();}
+  else if(k.indexOf('f.')===0)state.form[k.slice(2)]=t.value;
+});
+document.addEventListener('keydown',function(ev){if(!inApp(ev))return;
+  var t=ev.target;
+  if(t.getAttribute('data-lstsearch')!=null&&ev.key==='Enter'){ev.preventDefault();var i=active.i;var ranked=rankLists(lstQuery);
+    if(ranked.length&&ranked[0].n.toLowerCase()===lstQuery.trim().toLowerCase()){listToggle(i,ranked[0].n);}
+    else if(lstQuery.trim()){var arr=listItems(i);if(arr.indexOf(lstQuery.trim())<0){arr.push(lstQuery.trim());listSet(i,arr);}lstQuery='';}
+    renderEditor();renderRail();renderTree();focusList();return;}
+  var sup=t.getAttribute('data-supinput');if(sup&&ev.key==='Enter'){ev.preventDefault();addSup(sup);}
+});
+document.addEventListener('mousedown',function(ev){if(!inApp(ev))return;if(ev.target.closest('.rb'))ev.preventDefault();});
+document.addEventListener('click',function(ev){if(!inApp(ev))return;cbScheduleSave();
+  var t=ev.target;
+  var node=t.closest('[data-node]');if(node){var d=node.getAttribute('data-node').split('.');active={type:d[0],i:d[1]!=null?+d[1]:0};renderTree();renderEditor();renderRail();return;}
+  var add=t.closest('[data-addemail]');if(add){var e=newEmail();e.open=true;state.emails.push(e);active={type:'email',i:state.emails.length-1};renderTree();renderEditor();renderRail();updateStatus();return;}
+  var sc=t.closest('[data-scope]');if(sc){var key=sc.getAttribute('data-scope');state.include[key]=!state.include[key];
+    if(key==='email'&&state.include.email&&!state.emails.length)state.emails.push(newEmail());
+    if(key==='form'&&state.include.form&&!state.form)state.form=newForm();
+    if(key==='cadence'&&state.include.cadence&&!state.cadence)state.cadence=newCadence();
+    if(key==='qualified'&&state.include.qualified&&!state.qualified)state.qualified=newQualified();
+    repaint();updateStatus();return;}
+  var rb=t.closest('.rb');if(rb){var cmd=rb.getAttribute('data-cmd');var key=rb.closest('[data-rte-tools]').getAttribute('data-rte-tools');var ed=document.querySelector('[data-rte="'+key+'"]');
+    if(ed){ed.focus();if(cmd==='createLink'){var url=prompt('Link URL:','https://');if(url)document.execCommand('createLink',false,url);}else document.execCommand(cmd,false,null);setRte(key,ed.innerHTML);}return;}
+  var opt=t.closest('.cb-opt[data-tag]');if(opt){var wrap=opt.closest('[data-cta]');var k=wrap.getAttribute('data-cta');var i=+k.split('.')[1];var tag=opt.getAttribute('data-tag');
+    var arr=state.emails[i].cta;var idx=arr.indexOf(tag);if(idx>=0)arr.splice(idx,1);else arr.push(tag);opt.classList.toggle('on');renderRail();return;}
+  var fan=t.closest('.cb-opt[data-fanaud]');if(fan){fan.classList.toggle('on');return;}
+  var fanGo=t.closest('[data-fanout]');if(fanGo){var i=+fanGo.getAttribute('data-fanout');var sel=[].slice.call(document.querySelectorAll('.cb-opt[data-fanaud].on')).map(function(x){return x.getAttribute('data-fanaud');});fanOut(i,sel);return;}
+  var lst=t.closest('[data-lst]');if(lst){listToggle(active.i,lst.getAttribute('data-lst'));renderEditor();renderRail();renderTree();focusList();return;}
+  var lrm=t.closest('[data-lstrm]');if(lrm){listRemove(active.i,lrm.getAttribute('data-lstrm'));renderEditor();renderRail();renderTree();focusList();return;}
+  var sa=t.closest('[data-supadd]');if(sa){addSup(sa.getAttribute('data-supadd'));return;}
+  var srm=t.closest('[data-suprm]');if(srm){var pr=srm.getAttribute('data-suprm').split('|');var pe=pr[0].split('.');state.emails[+pe[1]][pe[2]].splice(+pr[1],1);renderEditor();return;}
+  var dup=t.closest('[data-dup]');if(dup){var i=+dup.getAttribute('data-dup');var copy=JSON.parse(JSON.stringify(state.emails[i]));copy.open=true;copy.number='';state.emails.splice(i+1,0,copy);active={type:'email',i:i+1};renderTree();renderEditor();renderRail();updateStatus();return;}
+  var del=t.closest('[data-del]');if(del){var i=+del.getAttribute('data-del');state.emails.splice(i,1);active={type:'email',i:Math.max(0,i-1)};if(!state.emails.length)active={type:'campaign'};renderTree();renderEditor();renderRail();updateStatus();return;}
+  var fa=t.closest('[data-ffadd]');if(fa){state.form.fields.push({label:'',req:false,custom:true});renderEditor();return;}
+  var fd=t.closest('[data-ffdel]');if(fd){state.form.fields.splice(+fd.getAttribute('data-ffdel'),1);renderEditor();return;}
+  var ca=t.closest('[data-cadstepadd]');if(ca){state.cadence.steps.push({subject:'',body:''});renderEditor();return;}
+  var cd=t.closest('[data-cadstepdel]');if(cd){state.cadence.steps.splice(+cd.getAttribute('data-cadstepdel'),1);renderEditor();return;}
+  var cn=t.closest('[data-copyname]');if(cn){copyText(effPardot(+cn.getAttribute('data-copyname')),cn);return;}
+  var ctg=t.closest('[data-copytags]');if(ctg){var i=ctg.getAttribute('data-copytags');copyText((window['_tags'+i]||[]).join(', '),ctg);return;}
+  var gen=t.closest('[data-gen]');if(gen){doGenerate();return;}
+  var imp=t.closest('[data-import]');if(imp){document.getElementById('cb-importfile').value='';document.getElementById('cb-importfile').click();return;}
+  var ds=t.closest('[data-draftsave]');if(ds){cbDownloadDraft();return;}
+  var dl=t.closest('[data-draftload]');if(dl){document.getElementById('cb-draftfile').value='';document.getElementById('cb-draftfile').click();return;}
+  var df2=t.closest('[data-draftfresh]');if(df2){cbStartFresh();active={type:'campaign'};repaint();return;}
+});
+function focusList(){var el=document.getElementById('cb-lstsearch');if(el){el.focus();var v=el.value;el.value='';el.value=v;}}
+function addSup(key){var inp=document.querySelector('[data-supinput="'+key+'"]');if(!inp)return;var v=inp.value.trim();if(!v)return;var p=key.split('.');state.emails[+p[1]][p[2]].push(v);renderEditor();}
+function fanOut(srcIndex,audVals){if(!audVals||!audVals.length){toast('Pick one or more audiences first');return;}
+  var at=srcIndex+1;
+  audVals.forEach(function(av){var copy=JSON.parse(JSON.stringify(state.emails[srcIndex]));copy.open=true;copy.audience=av;copy.pardotName='';copy.pardotEdited=false;state.emails.splice(at++,0,copy);});
+  active={type:'email',i:srcIndex+1};renderTree();renderEditor();renderRail();updateStatus();toast(audVals.length+' variant'+(audVals.length!==1?'s':'')+' created');
+}
 
-document.getElementById('addEmail').addEventListener('click',()=>{const e=newEmail();e.open=true;state.emails.push(e);renderEmails();updateStatus();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});});
-
-document.getElementById('generate').addEventListener('click',async()=>{
-  if(!state.include.email&&!state.include.form&&!state.include.cadence&&!state.include.qualified){alert('Select at least one thing to include (Email, Pardot Form, SalesLoft Cadence, or Qualified Experience) at the top.');return;}
-  const miss=missingRequired();
-  if(miss.length&&!confirm(miss.length+' required field(s) still blank:\n\n'+miss.slice(0,12).join('\n')+(miss.length>12?'\n…':'')+'\n\nGenerate anyway?'))return;
+/* ---- generate: assembles the SAME data object as the original, calls buildDocx ---- */
+async function doGenerate(){
+  if(!state.include.email&&!state.include.form&&!state.include.cadence&&!state.include.qualified){alert('Select at least one thing to include at the top (Email, Form, Cadence, or Qualified).');return;}
+  var miss=missingRequired();
+  if(miss.length&&!confirm(miss.length+' required field(s) still blank:\n\n'+miss.slice(0,12).join('\n')+(miss.length>12?'\n\u2026':'')+'\n\nGenerate anyway?'))return;
   try{
-    const c=state.campaign;const inc=state.include;
-    const data={include:{email:inc.email,form:inc.form,cadence:inc.cadence,qualified:inc.qualified},campaign:{name:c.name,crm:c.crm,quarterLabel:revLabel(QUARTERS,c.quarter),yearLabel:revLabel(YEARS,c.year)},
-      emails:state.emails.map((e,i)=>{const r=computeEmail(i);return{
-        number:e.hasOrder?(e.number||String(i+1)):'',hasOrder:e.hasOrder,pardotName:effPardot(i),tags:r.tags.map(x=>x.t).join(', '),
+    var c=state.campaign,inc=state.include;
+    var data={include:{email:inc.email,form:inc.form,cadence:inc.cadence,qualified:inc.qualified},
+      campaign:{name:c.name,crm:c.crm,quarterLabel:revLabel(QUARTERS,c.quarter),yearLabel:revLabel(YEARS,c.year)},
+      emails:state.emails.map(function(e,i){var r=computeEmail(i);return{
+        number:e.hasOrder?(e.number||String(i+1)):'',hasOrder:e.hasOrder,pardotName:effPardot(i),tags:r.tags.map(function(x){return x.t;}).join(', '),
         emailType:revLabel(SENDTYPE,e.emailType),contentType:revLabel(CONTENT,e.contentType),audience:revLabel(AUDIENCE,e.audience),
-        theme:revLabel(THEME,e.theme),abTest:e.ab||'No',
-        cta:(e.cta||[]).map(t=>revLabel(CTAOPTS,t)).join(', '),
+        theme:revLabel(THEME,e.theme),abTest:e.ab||'No',cta:(e.cta||[]).map(function(t){return revLabel(CTAOPTS,t);}).join(', '),
         lists:e.lists,suppression:(e.suppressionList||[]).join('\n'),senderName:e.senderName,fromEmail:e.fromEmail,replyTo:e.replyTo,
         subjectA:e.subjectA,subjectB:e.subjectB,preview:e.preview,sendDate:fmtDate(e.sendDate),sendTime:e.sendTime,
         hero:e.hero,body:e.body,mainCta:e.mainCta,secCtaCopy:e.secCtaCopy,secCta:e.secCta};})};
-    if(inc.form&&state.form){const f=state.form;
-      data.form={name:effFormName(),fields:f.fields.map(x=>({label:x.label,req:x.req,custom:x.custom})),
-        previewLink:f.previewLink,iframe:f.iframe,source:f.source,leadSource:f.leadSource,slack:f.slack,
-        autoresponder:f.autoresponder,displayMsg:f.displayMsg,tc:f.tc};}
-    if(inc.cadence&&state.cadence){const cd=state.cadence;data.cadence={name:effCadenceName(),steps:(cd.steps||[]).map(stp=>({subject:stp.subject,body:stp.body}))};}
-    if(inc.qualified&&state.qualified){const qd=state.qualified;data.qualified={name:effQualifiedName(),segment:qd.segment,headline:qd.headline,body:qd.body,imageUrl:qd.imageUrl,subtext:qd.subtext,ctas:qd.ctas};}
-    let logo=null;
-    try{const resp=await fetch(LOGO_URL,{mode:'cors'});if(resp&&resp.ok){const buf=new Uint8Array(await resp.arrayBuffer());const dim=pngSize(buf);if(dim)logo={bytes:buf,w:dim.w,h:dim.h};}}catch(e){/* logo blocked — fall back to text wordmark */}
-    const bytes=buildDocx(data,logo);
-    const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-    const url=URL.createObjectURL(blob);
-    const safe=(c.name||'Campaign').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')||'Campaign';
-    const a=document.createElement('a');a.href=url;a.download=safe+'_Campaign_Build.docx';document.body.appendChild(a);a.click();a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1500);
-    toast('Word doc generated · check your downloads');
+    if(inc.form&&state.form){var f=state.form;data.form={name:effFormName(),fields:f.fields.map(function(x){return{label:x.label,req:x.req,custom:x.custom};}),previewLink:f.previewLink,iframe:f.iframe,source:f.source,leadSource:f.leadSource,slack:f.slack,autoresponder:f.autoresponder,displayMsg:f.displayMsg,tc:f.tc};}
+    if(inc.cadence&&state.cadence){var cd=state.cadence;data.cadence={name:effCadenceName(),steps:(cd.steps||[]).map(function(s){return{subject:s.subject,body:s.body};})};}
+    if(inc.qualified&&state.qualified){var qd=state.qualified;data.qualified={name:effQualifiedName(),segment:qd.segment,headline:qd.headline,body:qd.body,imageUrl:qd.imageUrl,subtext:qd.subtext,ctas:qd.ctas};}
+    var logo=null;try{var resp=await fetch(LOGO_URL,{mode:'cors'});if(resp&&resp.ok){var buf=new Uint8Array(await resp.arrayBuffer());var dim=pngSize(buf);if(dim)logo={bytes:buf,w:dim.w,h:dim.h};}}catch(e){}
+    var bytes=buildDocx(data,logo);
+    var blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    var url=URL.createObjectURL(blob);var safe=(c.name||'Campaign').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')||'Campaign';
+    var a=document.createElement('a');a.href=url;a.download=safe+'_Campaign_Build.docx';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    toast('Word doc generated \u00b7 check your downloads');
   }catch(err){console.error(err);toast('Something went wrong generating the doc');}
-});
-let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
-
-var _impBtn=document.getElementById('importBtn'),_impFile=document.getElementById('importFile');
-if(_impBtn&&_impFile){
-  _impBtn.addEventListener('click',function(){_impFile.value='';_impFile.click();});
-  _impFile.addEventListener('change',async function(ev){
-    var f=ev.target.files&&ev.target.files[0];if(!f)return;
-    try{
-      var buf=new Uint8Array(await f.arrayBuffer());
-      var xml=await cbGetDocumentXml(buf);
-      var res=cbParseBuildDoc(xml);
-      applyImportedState(res.state);
-      var n=state.emails.length;
-      var bits=[];if(state.include.email)bits.push(n+' email'+(n!==1?'s':''));if(state.include.form)bits.push('form');
-      toast('Imported \u00b7 '+(bits.join(' + ')||'build doc'));
-      if(res.warnings&&res.warnings.length){console.warn('Import \u2014 review:',res.warnings);setTimeout(function(){alert(res.warnings.length+' field(s) need a quick look (value not in the current option list):\n\n'+res.warnings.slice(0,12).join('\n')+(res.warnings.length>12?'\n\u2026':''));},80);}
-      try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
-    }catch(err){console.error(err);toast(err&&err.message?err.message:'Could not read that .docx');}
-  });
 }
 
-// draft controls (direct element listeners — independent of the guarded document handlers)
-(function(){
-  var sb=document.getElementById('cbSaveDraftBtn'),lb=document.getElementById('cbLoadDraftBtn'),sf=document.getElementById('cbStartFresh'),df=document.getElementById('cbDraftFile');
-  if(sb)sb.addEventListener('click',cbDownloadDraft);
-  if(lb&&df)lb.addEventListener('click',function(){df.value='';df.click();});
-  if(df)df.addEventListener('change',function(ev){var f=ev.target.files&&ev.target.files[0];if(f)cbLoadDraftFile(f);});
-  if(sf)sf.addEventListener('click',cbStartFresh);
+/* ===================== INIT ===================== */
+(function init(){
+  var tl=document.getElementById('cb-timeopts');if(tl)tl.innerHTML=TIME_OPTS.map(function(t){return '<option value="'+aesc(t)+'"></option>';}).join('');
+  /* import wiring */
+  var impFile=document.getElementById('cb-importfile');
+  if(impFile)impFile.addEventListener('change',async function(ev){var f=ev.target.files&&ev.target.files[0];if(!f)return;
+    try{var buf=new Uint8Array(await f.arrayBuffer());var xml=await cbGetDocumentXml(buf);var res=cbParseBuildDoc(xml);applyImportedState(res.state);active={type:'campaign'};repaint();
+      toast('Imported build doc');if(res.warnings&&res.warnings.length){console.warn('Import review:',res.warnings);}
+    }catch(err){console.error(err);toast(err&&err.message?err.message:'Could not read that .docx');}});
+  var draftFile=document.getElementById('cb-draftfile');
+  if(draftFile)draftFile.addEventListener('change',function(ev){var f=ev.target.files&&ev.target.files[0];if(f)cbLoadDraftFile(f);});
   window.addEventListener('beforeunload',cbSaveNow);
+  var restored=cbLoadAutosave();
+  if(!restored)state.emails.push(newEmail());
+  active={type:'campaign'};
+  repaint();
+  if(restored)setTimeout(function(){cbFlashDraft&&cbFlashDraft('Draft restored');},300);
 })();
-
-// init — restore a saved draft if present, else start with one empty email
-document.getElementById('timeopts').innerHTML=TIME_OPTS.map(t=>`<option value="${t}"></option>`).join('');
-var _cbRestored=cbLoadAutosave();
-if(!_cbRestored)state.emails.push(newEmail());
-renderScope();renderCampaign();renderEmails();showModules();updateAllOutputs();updateStatus();
-if(_cbRestored)setTimeout(function(){cbFlashDraft('Draft restored');},300);
 
 })();

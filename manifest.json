@@ -12,7 +12,7 @@
         "leaf": "Campaign Builder"
       },
       "pageClass": "page gov-ed",
-      "pageStyle": "padding:28px 32px;max-width:1100px;margin:0 auto;",
+      "pageStyle": "padding:0;max-width:1320px;margin:0 auto;",
       "html": "sections/campaign-builder/section.html",
       "css": "sections/campaign-builder/section.css",
       "js": "sections/campaign-builder/section.js"
