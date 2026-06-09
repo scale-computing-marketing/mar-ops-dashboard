@@ -1,0 +1,33 @@
+<!-- Campaign Builder — section markup (mounted into #p-builder by the loader) -->
+<div class="cbuilder gov-ed">
+
+  <header class="ed-masthead">
+    <p class="ed-kicker">SC//Governance · Campaign Builder</p>
+    <h1>Campaign Builder <em>— build &amp; tag</em></h1>
+    <p class="ed-lede">Fill in the campaign once, then add each email send. Tagging fields use the canonical Tag
+      Library values, so every send gets its Pardot name and tags resolved live. When you're done, generate the
+      Word build doc — ready to hand off.</p>
+  </header>
+
+  <div id="scope"></div>
+  <div id="campaignCard"></div>
+  <div id="emailModule">
+    <div id="emails"></div>
+    <button class="cb-add" id="addEmail">+ Add another email send</button>
+  </div>
+  <div id="formModule"></div>
+
+</div>
+
+<div class="cb-bar">
+  <div class="cb-bar-in">
+    <div class="cb-status" id="status"></div>
+    <button class="cb-gen" id="generate">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+        stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+      Generate Word doc
+    </button>
+  </div>
+</div>
+<div class="cb-toast" id="toast"></div>
+<datalist id="timeopts"></datalist>
