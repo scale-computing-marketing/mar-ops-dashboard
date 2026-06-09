@@ -21,6 +21,16 @@
   padding:0;border-top:0;background:transparent}
 #p-builder .cb-actions .cb-primary{margin-left:4px}
 #p-builder .cb-actions .cb-div{display:inline-block}
+/* the bar sits in a query container; when the sidebar squeezes it narrow,
+   stack into a tidy strip rather than wrapping the actions off to one side */
+#p-builder .cb-barwrap{container-type:inline-size}
+@container (max-width:1120px){
+  #p-builder .cb-bar{flex-direction:column;align-items:stretch;gap:0;overflow:hidden;padding:0}
+  #p-builder .cb-scope-row{flex:1 1 auto;padding:12px 14px}
+  #p-builder .cb-actions{flex:1 1 auto;justify-content:flex-start;padding:10px 14px;border-top:1px solid var(--ed-line);background:var(--ed-soft)}
+  #p-builder .cb-actions .cb-primary{margin-left:auto}
+  #p-builder .cb-actions .cb-div{display:none}
+}
 #p-builder .cb-uicon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:30px;border:0;background:transparent;color:var(--ed-mono);border-radius:8px;cursor:pointer;transition:all .15s}
 #p-builder .cb-uicon:hover{background:var(--ed-soft);color:var(--ed-navy)}
 #p-builder .cb-uicon.cb-danger:hover{background:#fcebec;color:var(--cb-red)}
