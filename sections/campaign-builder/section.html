@@ -16,17 +16,32 @@
     <button class="cb-add" id="addEmail">+ Add another email send</button>
   </div>
   <div id="formModule"></div>
+  <div id="cadenceModule"></div>
+  <div id="qualifiedModule"></div>
 
 </div>
 
 <div class="cb-bar">
   <div class="cb-bar-in">
     <div class="cb-status" id="status"></div>
-    <button class="cb-gen" id="generate">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-        stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
-      Generate Word doc
-    </button>
+    <div class="cb-actions">
+      <span class="cb-draft-state" id="cbDraftState"></span>
+      <button class="cb-mini" id="cbStartFresh" type="button" title="Clear the build and the saved draft">Start fresh</button>
+      <button class="cb-mini" id="cbLoadDraftBtn" type="button" title="Load a .json draft">Load draft</button>
+      <button class="cb-mini" id="cbSaveDraftBtn" type="button" title="Download this build as a .json draft">Save draft</button>
+      <button class="cb-import" id="importBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9"/><path d="m7 13 5-5 5 5"/><path d="M5 3h14"/></svg>
+        Import build doc
+      </button>
+      <button class="cb-gen" id="generate">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+          stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 11 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Generate Word doc
+      </button>
+    </div>
+    <input type="file" id="importFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+    <input type="file" id="cbDraftFile" accept=".json,application/json" hidden>
   </div>
 </div>
 <div class="cb-toast" id="toast"></div>

@@ -94,6 +94,16 @@ function buildDocBody(data){const parts=[];const camp=data.campaign||{};const in
     parts.push(dsection('Completion Actions',[{label:'Source',value:f.source},{label:'Detailed Lead Source',value:f.leadSource},{label:'Notify Slack Channel',value:f.slack},{label:'Add to CRM Campaign',value:camp.name},{label:'CRM Campaign Link',value:camp.crm,valueColor:DC.link},{label:'Send Email (Autoresponder)',value:f.autoresponder},{label:'Display Message',value:f.displayMsg}]));
     parts.push(dsection('Terms & Conditions',[{label:'Terms & Conditions',value:f.tc,html:true}]));
   }
+  if(inc.cadence&&data.cadence){var cad=data.cadence;
+    parts.push(dheading('SalesLoft Cadence',32,320,140,true));
+    parts.push(dsection('SalesLoft Cadence',[{label:'Internal Flow Name',value:cad.name}]));
+    (cad.steps||[]).forEach(function(stp,i){parts.push(dsection('Email Step '+(i+1),[{label:'Subject Line',value:stp.subject},{label:'Body Copy',value:stp.body}]));});
+  }
+  if(inc.qualified&&data.qualified){var qx=data.qualified;
+    parts.push(dheading('Qualified Experience',32,320,140,true));
+    parts.push(dsection('Qualified Experience',[{label:'Internal Experience Name',value:qx.name},{label:'Page or Audience Segment',value:qx.segment}]));
+    parts.push(dsection('Experience Copy',[{label:'Headline',value:qx.headline},{label:'Body Copy',value:qx.body},{label:'Image & Image URL',value:qx.imageUrl,valueColor:DC.link},{label:'Subtext Below Image',value:qx.subtext},{label:'CTA Buttons',value:qx.ctas}]));
+  }
   return parts.join('\n');}
 function buildDocx(data,logo){const body=buildDocBody(data);
   const hasLogo=!!(logo&&logo.bytes&&logo.w&&logo.h);
@@ -148,9 +158,11 @@ function revLabel(opts,tag){for(var i=0;i<opts.length;i++)if(opts[i][1]===tag)re
 function findCampaign(name){if(!name)return null;var nn=norm(name);for(var i=0;i<REGISTRY.length;i++)if(norm(REGISTRY[i].name)===nn)return REGISTRY[i];for(var i=0;i<REGISTRY.length;i++){var cn=norm(REGISTRY[i].name);if(cn&&(nn.indexOf(cn)>=0||cn.indexOf(nn)>=0))return REGISTRY[i];}return null;}
 
 //// ============ STATE ============
-const state={include:{email:true,form:false},campaign:{name:'',crm:'',quarter:'',year:''},emails:[],form:null};
+const state={include:{email:true,form:false,cadence:false,qualified:false},campaign:{name:'',crm:'',quarter:'',year:''},emails:[],form:null,cadence:null,qualified:null};
 function newFormFields(){return [{label:'First Name',req:true,custom:false},{label:'Last Name',req:true,custom:false},{label:'Business Email',req:true,custom:false},{label:'Phone',req:true,custom:false},{label:'Company',req:true,custom:false},{label:'Country',req:true,custom:false}];}
 function newForm(){return{nameEdited:false,name:'',fields:newFormFields(),previewLink:'',iframe:'',source:'Marketing',leadSource:'Website',slack:'pardot_notifications',autoresponder:'',displayMsg:'Thank you! Check your inbox for the report.',tc:'',open:false};}
+function newCadence(){return{nameEdited:false,name:'',steps:[{subject:'',body:''}],open:true};}
+function newQualified(){return{nameEdited:false,name:'',segment:'',headline:'',body:'',imageUrl:'',subtext:'',ctas:'',open:true};}
 const TC_TYPES=[];
 function newEmail(){return{pardotName:'',pardotEdited:false,hasOrder:true,number:'',emailType:'',contentType:'',audience:'',theme:'',ab:'No',cta:[],
   lists:'',suppressionList:DEFAULT_SUPPRESSION.slice(),senderName:'Scale Computing',fromEmail:'noreply@scalecomputing.com',replyTo:'noreply@scalecomputing.com',
@@ -266,7 +278,7 @@ const chev=`<svg class="cb-chev" width="13" height="13" viewBox="0 0 24 24" fill
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 function renderScope(){
-  const opts=[['email','Email',true],['form','Pardot Form',true],['cadence','SalesLoft Cadence',false],['qualified','Qualified Experience',false]];
+  const opts=[['email','Email',true],['form','Pardot Form',true],['cadence','SalesLoft Cadence',true],['qualified','Qualified Experience',true]];
   document.getElementById('scope').innerHTML='<div class="scope-bar"><span class="scope-lbl">This build includes</span>'+
     opts.map(o=>`<button type="button" class="scope-opt ${state.include[o[0]]?'on':''} ${o[2]?'':'soon'}" ${o[2]?`data-scope="${o[0]}"`:'disabled'}>${o[1]}${o[2]?'':' · soon'}</button>`).join('')+'</div>';
 }
@@ -274,10 +286,20 @@ function showModules(){
   document.getElementById('emailModule').style.display=state.include.email?'':'none';
   const fm=document.getElementById('formModule');
   if(state.include.form){if(!state.form)state.form=newForm();fm.style.display='';renderForm();}else fm.style.display='none';
+  const cm=document.getElementById('cadenceModule');
+  if(state.include.cadence){if(!state.cadence)state.cadence=newCadence();cm.style.display='';renderCadence();}else cm.style.display='none';
+  const qm=document.getElementById('qualifiedModule');
+  if(state.include.qualified){if(!state.qualified)state.qualified=newQualified();qm.style.display='';renderQualified();}else qm.style.display='none';
 }
 function autoFormName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(c.name||'Campaign name');}
 function effFormName(){const f=state.form;return f&&f.nameEdited?(f.name||''):autoFormName();}
 function updateFormName(){const f=state.form;if(!f||f.nameEdited)return;const auto=autoFormName();f.name=auto;const inp=document.querySelector('[data-k="f.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;}
+function autoCadenceName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(c.name||'Campaign name');}
+function effCadenceName(){const c=state.cadence;return c&&c.nameEdited?(c.name||''):autoCadenceName();}
+function updateCadenceName(){const c=state.cadence;if(!c||c.nameEdited)return;const auto=autoCadenceName();const inp=document.querySelector('[data-k="cad.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='\u00b7 '+auto;}
+function autoQualifiedName(){const c=state.campaign;const ever=isEvergreen();const prefix=ever?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');return prefix+(c.name||'Campaign name');}
+function effQualifiedName(){const q=state.qualified;return q&&q.nameEdited?(q.name||''):autoQualifiedName();}
+function updateQualifiedName(){const q=state.qualified;if(!q||q.nameEdited)return;const auto=autoQualifiedName();const inp=document.querySelector('[data-k="q.name"]');if(inp&&document.activeElement!==inp)inp.value=auto;const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='\u00b7 '+auto;}
 function crmDisplay(){const c=state.campaign;return (escH(c.name||'\u2014'))+(c.crm?(' \u00b7 '+escH(c.crm)):'');}
 function updateCrmLine(){const c=state.campaign;const n=document.querySelector('[data-crmname]');if(n)n.innerHTML=escH(c.name||'\u2014');const l=document.querySelector('[data-crmlink]');if(l)l.innerHTML=escH(c.crm||'\u2014');}
 const formGroups=[
@@ -318,6 +340,28 @@ function renderForm(){
   </section>`;
   const sub=document.getElementById('formSub');if(sub)sub.textContent='· '+effFormName();
 }
+function renderCadence(){
+  const c=state.cadence;if(!c)return;
+  const nameField=fieldHtml({k:'name',l:'Internal Flow Name',hint:'(auto — editable)',wide:true,ph:'Q3-2026 | Campaign'},effCadenceName(),'cad.name');
+  const steps=c.steps.map((stp,i)=>`<div class="cb-group"><div class="cb-glabel">Email Step ${i+1}${c.steps.length>1?` <button class="ff-del" data-cadstepdel="${i}" title="Remove step">×</button>`:''}</div><div class="cb-grid">${fieldHtml({k:'subject',l:'Subject Line',wide:true,ph:'(blank = reply in thread)'},stp.subject,'cad.'+i+'.subject')}${fieldHtml({k:'body',l:'Body Copy',hint:'(merge tokens ok, e.g. {!firstname})',wide:true,type:'textarea',ph:'Hi {!firstname},…'},stp.body,'cad.'+i+'.body')}</div></div>`).join('');
+  document.getElementById('cadenceModule').innerHTML=`<section class="cb-card ${c.open?'':'collapsed'}" data-card="cadence">
+    <div class="cb-head" data-toggle="cadence">${chev}<span class="cb-title">SalesLoft Cadence<span class="sub" id="cadenceSub"></span></span></div>
+    <div class="cb-body"><div class="cb-group"><div class="cb-grid">${nameField}</div></div>${steps}<button type="button" class="cb-add sm" data-cadstepadd>+ Add email step</button></div>
+  </section>`;
+  const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='· '+effCadenceName();
+}
+function renderQualified(){
+  const q=state.qualified;if(!q)return;
+  const f=(k,l,opts)=>fieldHtml(Object.assign({k:k,l:l},opts||{}),k==='name'?effQualifiedName():q[k],'q.'+k);
+  document.getElementById('qualifiedModule').innerHTML=`<section class="cb-card ${q.open?'':'collapsed'}" data-card="qualified">
+    <div class="cb-head" data-toggle="qualified">${chev}<span class="cb-title">Qualified Experience<span class="sub" id="qualifiedSub"></span></span></div>
+    <div class="cb-body">
+      <div class="cb-group"><div class="cb-grid">${f('name','Internal Experience Name',{hint:'(auto — editable)',wide:true})}${f('segment','Page or Audience Segment',{wide:true,type:'textarea',ph:'Which page or audience segment this experience targets'})}</div></div>
+      <div class="cb-group"><div class="cb-glabel">Experience copy</div><div class="cb-grid">${f('headline','Headline',{wide:true})}${f('body','Body Copy',{wide:true,type:'textarea'})}${f('imageUrl','Image & Image URL',{wide:true,ph:'https://…'})}${f('subtext','Subtext Below Image',{wide:true})}${f('ctas','CTA Buttons',{hint:'(one per line)',wide:true,type:'textarea',ph:'Book a meeting\nConnect with an expert\nGet Pricing'})}</div></div>
+    </div>
+  </section>`;
+  const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='· '+effQualifiedName();
+}
 function renderCampaign(){
   const c=state.campaign,open=state.campaign.open;
   document.getElementById('campaignCard').innerHTML=
@@ -355,24 +399,193 @@ function updateCardOutput(i){
   const tc=document.querySelector(`[data-tcount="${i}"]`);if(tc)tc.textContent='· '+r.tags.length;
   window['_tags'+i]=r.tags.map(x=>x.t);
 }
-function updateAllOutputs(){state.emails.forEach((e,i)=>updateCardOutput(i));updateRegMatch();updateFormName();updateCrmLine();}
+function updateAllOutputs(){state.emails.forEach((e,i)=>updateCardOutput(i));updateRegMatch();updateFormName();if(state.cadence)updateCadenceName();if(state.qualified)updateQualifiedName();updateCrmLine();}
 function updateRegMatch(){const reg=findCampaign(state.campaign.name);const sub=document.getElementById('campaignSub');if(sub)sub.textContent=reg?'· registry match':'';}
 function updateStatus(){
   const inc=state.include;const bits=[];
   if(inc.email)bits.push(`<b>${state.emails.length}</b> email send${state.emails.length!==1?'s':''}`);
   if(inc.form)bits.push('<b>Pardot form</b>');
+  if(inc.cadence)bits.push('<b>SalesLoft cadence</b>');
+  if(inc.qualified)bits.push('<b>Qualified experience</b>');
   if(!bits.length)bits.push('nothing selected');
   const miss=missingRequired();
   document.getElementById('status').innerHTML=bits.join(' · ')+' · '+
     (miss.length?`<span class="warn">${miss.length} required field${miss.length!==1?'s':''} blank</span>`:`<span class="ok">required fields complete</span>`);
 }
 function missingRequired(){const m=[];const c=state.campaign;const inc=state.include;
-  if(inc.email||inc.form){if(!c.name.trim())m.push('Campaign Name');if(!c.quarter)m.push('Quarter');if(!c.year)m.push('Year');}
+  if(inc.email||inc.form||inc.cadence||inc.qualified){if(!c.name.trim())m.push('Campaign Name');if(!c.quarter)m.push('Quarter');if(!c.year)m.push('Year');}
   if(inc.email)state.emails.forEach((e,i)=>{[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(([k,l])=>{if(!String(e[k]||'').trim())m.push('Email '+(i+1)+': '+l);});});
   return m;}
 
+//// ============ IMPORT — read a generated/edited .docx back into state ============
+// Works on docs produced by this builder, including after a Google Docs round-trip
+// (we parse the visible label/value tables, so edits made in Google Docs are honored).
+var CB_WNS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+function cbU16(b,o){return b[o]|(b[o+1]<<8);}
+function cbU32(b,o){return (b[o]|(b[o+1]<<8)|(b[o+2]<<16)|(b[o+3]<<24))>>>0;}
+function cbFindEOCD(b){for(var i=b.length-22;i>=0;i--){if(b[i]===0x50&&b[i+1]===0x4b&&b[i+2]===0x05&&b[i+3]===0x06)return i;}return -1;}
+function cbReadZip(bytes){
+  var b=bytes,eocd=cbFindEOCD(b);
+  if(eocd<0)throw new Error('That file isn\u2019t a .docx (no zip directory found).');
+  var count=cbU16(b,eocd+10),cdOff=cbU32(b,eocd+16),entries={},p=cdOff,dec=new TextDecoder();
+  for(var i=0;i<count;i++){
+    if(cbU32(b,p)!==0x02014b50)break;
+    var method=cbU16(b,p+10),compSize=cbU32(b,p+20),nameLen=cbU16(b,p+28),extraLen=cbU16(b,p+30),commentLen=cbU16(b,p+32),lho=cbU32(b,p+42);
+    var name=dec.decode(b.subarray(p+46,p+46+nameLen));
+    entries[name]={method:method,compSize:compSize,lho:lho};
+    p+=46+nameLen+extraLen+commentLen;
+  }
+  return {bytes:b,entries:entries};
+}
+function cbReadEntry(zip,name){
+  var e=zip.entries[name];
+  if(!e)throw new Error('That .docx is missing '+name+'.');
+  var b=zip.bytes,q=e.lho;
+  if(cbU32(b,q)!==0x04034b50)throw new Error('Corrupt .docx (bad header for '+name+').');
+  var nameLen=cbU16(b,q+26),extraLen=cbU16(b,q+28),start=q+30+nameLen+extraLen,comp=b.subarray(start,start+e.compSize);
+  if(e.method===0)return Promise.resolve(comp.slice());
+  if(e.method===8){
+    if(typeof DecompressionStream==='undefined')return Promise.reject(new Error('This browser can\u2019t open compressed .docx files \u2014 try Chrome or Edge.'));
+    var ds=new DecompressionStream('deflate-raw');
+    var stream=new Blob([comp]).stream().pipeThrough(ds);
+    return new Response(stream).arrayBuffer().then(function(ab){return new Uint8Array(ab);});
+  }
+  return Promise.reject(new Error('Unsupported compression in .docx.'));
+}
+function cbGetDocumentXml(bytes){
+  var zip=cbReadZip(bytes);
+  return cbReadEntry(zip,'word/document.xml').then(function(u8){return new TextDecoder('utf-8').decode(u8);});
+}
+function cbGel(node,local){return node.getElementsByTagNameNS(CB_WNS,local);}
+function cbParaText(p){var ts=cbGel(p,'t'),s='';for(var i=0;i<ts.length;i++)s+=ts[i].textContent;return s;}
+function cbCellParas(tc){var ps=cbGel(tc,'p'),out=[];for(var i=0;i<ps.length;i++)out.push(cbParaText(ps[i]));return out;}
+function cbDirectCells(tr){var out=[],k=tr.childNodes;for(var i=0;i<k.length;i++){var n=k[i];if(n.nodeType===1&&n.namespaceURI===CB_WNS&&n.localName==='tc')out.push(n);}return out;}
+function cbLabelToValue(opts,label){if(label==null)return '';var t=String(label).trim().toLowerCase();for(var i=0;i<opts.length;i++)if(String(opts[i][0]).trim().toLowerCase()===t)return opts[i][1];return '';}
+function cbUnfmtDate(v){var m=String(v||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(!m)return '';var mm=('0'+m[1]).slice(-2),dd=('0'+m[2]).slice(-2);return m[3]+'-'+mm+'-'+dd;}
+function cbParasToHtml(paras){
+  if(!paras||!paras.length)return '';
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var out=[],listType=null,buf=[];
+  function flush(){if(listType){out.push('<'+listType+'>'+buf.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</'+listType+'>');buf=[];listType=null;}}
+  for(var i=0;i<paras.length;i++){
+    var line=paras[i]==null?'':String(paras[i]);
+    var ulm=line.match(/^\s*\u2022\s+(.*)$/),olm=line.match(/^\s*\d+\.\s+(.*)$/);
+    if(ulm){if(listType&&listType!=='ul')flush();listType='ul';buf.push(ulm[1]);}
+    else if(olm){if(listType&&listType!=='ol')flush();listType='ol';buf.push(olm[1]);}
+    else{flush();if(line.trim()==='')out.push('<div><br></div>');else out.push('<div>'+esc(line)+'</div>');}
+  }
+  flush();
+  return out.join('');
+}
+function cbParseBuildDoc(xml){
+  var doc=new DOMParser().parseFromString(xml,'application/xml');
+  var tbls=cbGel(doc,'tbl'),sections=[];
+  for(var i=0;i<tbls.length;i++){
+    var trs=cbGel(tbls[i],'tr'),rows=[];
+    for(var r=0;r<trs.length;r++){rows.push(cbDirectCells(trs[r]).map(cbCellParas));}
+    if(!rows.length)continue;
+    var title=((rows[0][0]||[]).join(' ')).trim();
+    sections.push({title:title,rows:rows});
+  }
+  function mapOf(sec){var m={};for(var r=1;r<sec.rows.length;r++){var c=sec.rows[r];if(c.length<2)continue;var label=((c[0]||[]).join(' ')).replace(/\s*\*+\s*$/,'').trim();m[label]={text:(c[1]||[]).join('\n'),paras:c[1]||[]};}return m;}
+  function v(m,l){return m[l]?m[l].text:'';}
+  var st={include:{email:false,form:false,cadence:false,qualified:false},campaign:{name:'',crm:'',quarter:'',year:'',open:true},emails:[],form:null,cadence:null,qualified:null};
+  var warn=[],cur=null;
+  for(var s=0;s<sections.length;s++){
+    var sec=sections[s],t=sec.title,m;
+    if(t==='Campaign'){m=mapOf(sec);
+      st.campaign.name=v(m,'Campaign Name');st.campaign.crm=v(m,'CRM Campaign Link');
+      st.campaign.quarter=cbLabelToValue(QUARTERS,v(m,'Quarter'));st.campaign.year=cbLabelToValue(YEARS,v(m,'Year'));
+    } else if(t==='Basic email information'){cur=newEmail();cur.open=false;st.emails.push(cur);m=mapOf(sec);
+      var pn=v(m,'Pardot Email Name');if(pn)cur.pardotName=pn;
+    } else if(cur&&t.indexOf('Tagging')===0){m=mapOf(sec);
+      if(m['Email #']){cur.hasOrder=true;cur.number=v(m,'Email #');}else{cur.hasOrder=false;}
+      var sel=[['Email Type',SENDTYPE,'emailType'],['Content Type',CONTENT,'contentType'],['Audience',AUDIENCE,'audience'],['Theme',THEME,'theme']];
+      for(var x=0;x<sel.length;x++){var raw=v(m,sel[x][0]),vv=cbLabelToValue(sel[x][1],raw);cur[sel[x][2]]=vv;if(raw&&!vv)warn.push('Email '+st.emails.length+' \u2014 '+sel[x][0]+': "'+raw+'" not recognized');}
+      cur.ab=/yes/i.test(v(m,'A/B Test'))?'Yes':'No';
+      var ctaStr=v(m,'CTA');cur.cta=ctaStr?ctaStr.split(/,\s*/).map(function(c){return cbLabelToValue(CTAOPTS,c.trim());}).filter(Boolean):[];
+    } else if(cur&&t.indexOf('To')===0){m=mapOf(sec);
+      cur.lists=v(m,'Lists (Send To)');var sup=v(m,'Suppression Lists');cur.suppressionList=sup?sup.split('\n').map(function(s2){return s2.trim();}).filter(Boolean):[];
+    } else if(cur&&t.indexOf('From')===0){m=mapOf(sec);
+      cur.senderName=v(m,'Sender Name')||cur.senderName;cur.fromEmail=v(m,'From Email Address')||cur.fromEmail;cur.replyTo=v(m,'Reply-To Email Address')||cur.replyTo;
+    } else if(cur&&t==='Subject'){m=mapOf(sec);
+      cur.subjectA=v(m,'Subject Line A');cur.subjectB=v(m,'Subject Line B');cur.preview=v(m,'Preview Copy');
+    } else if(cur&&t==='External'){m=mapOf(sec);
+      cur.sendDate=cbUnfmtDate(v(m,'Send Date (MM/DD/YYYY)'));cur.sendTime=v(m,'Send Time');
+    } else if(cur&&t==='Email build'){m=mapOf(sec);
+      cur.hero=v(m,'Hero Image');cur.body=cbParasToHtml(m['Body Copy']?m['Body Copy'].paras:[]);
+      cur.mainCta=v(m,'Main CTA');cur.secCtaCopy=v(m,'Secondary CTA Copy');cur.secCta=v(m,'Secondary CTA');
+    } else if(t==='Pardot Form'){if(!st.form)st.form=newForm();st.form.open=false;m=mapOf(sec);var nm=v(m,'Internal Name');if(nm)st.form.name=nm;
+    } else if(st.form&&t==='Form Fields'){var fields=[];
+      for(var r2=1;r2<sec.rows.length;r2++){var c2=sec.rows[r2];if(c2.length<2)continue;var lab=((c2[0]||[]).join(' ')).trim(),val2=(c2[1]||[]).join(' ');if(lab==='\u2014'||/No fields added/i.test(val2))continue;fields.push({label:lab,req:/Required/i.test(val2),custom:/Custom/i.test(val2)});}
+      if(fields.length)st.form.fields=fields;
+    } else if(st.form&&t.indexOf('Form Link')===0){m=mapOf(sec);st.form.previewLink=v(m,'Form Preview Link');st.form.iframe=v(m,'iFrame Code');
+    } else if(st.form&&t.indexOf('Completion')===0){m=mapOf(sec);
+      st.form.source=v(m,'Source')||st.form.source;st.form.leadSource=v(m,'Detailed Lead Source')||st.form.leadSource;st.form.slack=v(m,'Notify Slack Channel')||st.form.slack;
+      st.form.autoresponder=v(m,'Send Email (Autoresponder)');st.form.displayMsg=v(m,'Display Message')||st.form.displayMsg;
+    } else if(st.form&&t.indexOf('Terms')===0){m=mapOf(sec);st.form.tc=cbParasToHtml(m['Terms & Conditions']?m['Terms & Conditions'].paras:[]);
+    } else if(t==='SalesLoft Cadence'){if(!st.cadence)st.cadence=newCadence();st.cadence.steps=[];st.cadence.open=false;m=mapOf(sec);var fn=v(m,'Internal Flow Name');if(fn)st.cadence.name=fn;
+    } else if(st.cadence&&/^Email Step \d+$/.test(t)){m=mapOf(sec);st.cadence.steps.push({subject:v(m,'Subject Line'),body:(m['Body Copy']?m['Body Copy'].paras.join('\n'):'')});
+    } else if(t==='Qualified Experience'){if(!st.qualified)st.qualified=newQualified();st.qualified.open=false;m=mapOf(sec);var qn=v(m,'Internal Experience Name');if(qn)st.qualified.name=qn;st.qualified.segment=v(m,'Page or Audience Segment')||st.qualified.segment;
+    } else if(st.qualified&&t==='Experience Copy'){m=mapOf(sec);st.qualified.headline=v(m,'Headline');st.qualified.body=(m['Body Copy']?m['Body Copy'].paras.join('\n'):'');st.qualified.imageUrl=v(m,'Image & Image URL');st.qualified.subtext=v(m,'Subtext Below Image');st.qualified.ctas=(m['CTA Buttons']?m['CTA Buttons'].paras.join('\n'):'');}
+  }
+  st.include.email=st.emails.length>0;st.include.form=!!st.form;st.include.cadence=!!st.cadence;st.include.qualified=!!st.qualified;
+  if(st.cadence&&(!st.cadence.steps||!st.cadence.steps.length))st.cadence.steps=[{subject:'',body:''}];
+  if(!st.emails.length&&!st.form&&!st.cadence&&!st.qualified)throw new Error('No campaign build content was found in that document.');
+  return {state:st,warnings:warn};
+}
+function applyImportedState(ns){
+  state.include.email=!!ns.include.email;state.include.form=!!ns.include.form;
+  state.campaign.name=ns.campaign.name||'';state.campaign.crm=ns.campaign.crm||'';
+  state.campaign.quarter=ns.campaign.quarter||'';state.campaign.year=ns.campaign.year||'';state.campaign.open=true;
+  state.emails.length=0;(ns.emails||[]).forEach(function(e){state.emails.push(e);});
+  state.form=ns.form||null;
+  state.include.cadence=!!ns.include.cadence;state.include.qualified=!!ns.include.qualified;state.cadence=ns.cadence||null;state.qualified=ns.qualified||null;
+  state.emails.forEach(function(e,i){var auto=computeEmail(i).pardotName;if(e.pardotName&&e.pardotName.trim()&&e.pardotName.trim()!==auto.trim())e.pardotEdited=true;else{e.pardotEdited=false;e.pardotName='';}});
+  if(state.form){var fa=autoFormName();if(state.form.name&&state.form.name.trim()&&state.form.name.trim()!==fa.trim())state.form.nameEdited=true;else{state.form.nameEdited=false;state.form.name='';}}
+  if(state.cadence){var ca=autoCadenceName();if(state.cadence.name&&state.cadence.name.trim()&&state.cadence.name.trim()!==ca.trim())state.cadence.nameEdited=true;else{state.cadence.nameEdited=false;state.cadence.name='';}if(!state.cadence.steps||!state.cadence.steps.length)state.cadence.steps=[{subject:'',body:''}];}
+  if(state.qualified){var qa=autoQualifiedName();if(state.qualified.name&&state.qualified.name.trim()&&state.qualified.name.trim()!==qa.trim())state.qualified.nameEdited=true;else{state.qualified.nameEdited=false;state.qualified.name='';}}
+  if(state.include.email&&!state.emails.length)state.emails.push(newEmail());
+  renderScope();renderCampaign();renderEmails();showModules();updateAllOutputs();updateStatus();
+}
+
+//// ============ DRAFT PERSISTENCE (autosave + JSON save/load) ============
+var CB_DRAFT_KEY='scb-campaign-builder-draft-v1';
+function cbMerge(base,obj){if(obj&&typeof obj==='object'){for(var k in obj)base[k]=obj[k];}return base;}
+function cbRestoreState(ns){
+  if(!ns||typeof ns!=='object')return false;
+  var inc=ns.include||{};
+  state.include={email:!!inc.email,form:!!inc.form,cadence:!!inc.cadence,qualified:!!inc.qualified};
+  state.campaign=cbMerge({name:'',crm:'',quarter:'',year:'',open:true},ns.campaign);
+  state.emails.length=0;(ns.emails||[]).forEach(function(e){state.emails.push(cbMerge(newEmail(),e));});
+  state.form=ns.form?cbMerge(newForm(),ns.form):null;
+  state.cadence=ns.cadence?cbMerge(newCadence(),ns.cadence):null;
+  state.qualified=ns.qualified?cbMerge(newQualified(),ns.qualified):null;
+  if(state.cadence&&(!state.cadence.steps||!state.cadence.steps.length))state.cadence.steps=[{subject:'',body:''}];
+  if(state.include.email&&!state.emails.length)state.emails.push(newEmail());
+  return true;
+}
+function cbRepaint(){renderScope();renderCampaign();renderEmails();showModules();updateAllOutputs();updateStatus();}
+function cbDraftObj(){return {format:'sc-campaign-builder-draft',version:1,savedAt:new Date().toISOString(),state:state};}
+var cbSaveT=null;
+function cbScheduleSave(){if(cbSaveT)clearTimeout(cbSaveT);cbSaveT=setTimeout(cbSaveNow,700);}
+function cbSaveNow(){try{localStorage.setItem(CB_DRAFT_KEY,JSON.stringify(cbDraftObj()));cbFlashDraft('Draft saved');}catch(e){}}
+function cbFlashDraft(msg){var el=document.getElementById('cbDraftState');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(cbFlashDraft._t);cbFlashDraft._t=setTimeout(function(){el.classList.remove('show');},1800);}
+function cbLoadAutosave(){try{var raw=localStorage.getItem(CB_DRAFT_KEY);if(!raw)return false;var obj=JSON.parse(raw);return cbRestoreState(obj&&obj.state?obj.state:obj);}catch(e){return false;}}
+function cbClearDraft(){try{localStorage.removeItem(CB_DRAFT_KEY);}catch(e){}}
+function cbDownloadDraft(){
+  var nm=(state.campaign.name||'Campaign').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'_')||'Campaign';
+  try{var blob=new Blob([JSON.stringify(cbDraftObj(),null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=nm+'_builder-draft.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url);},1500);
+    toast('Draft saved \u00b7 '+nm+'_builder-draft.json');
+  }catch(e){toast('Could not save the draft file');}
+}
+function cbLoadDraftFile(file){var r=new FileReader();r.onload=function(){try{var obj=JSON.parse(r.result);var ns=obj&&obj.state?obj.state:obj;if(cbRestoreState(ns)){cbRepaint();cbSaveNow();toast('Draft loaded');}else toast('That file isn\u2019t a builder draft');}catch(e){toast('Could not read that draft file');}};r.readAsText(file);}
+function cbStartFresh(){if(!confirm('Clear the current build and the saved draft, and start fresh?'))return;cbClearDraft();state.include={email:true,form:false,cadence:false,qualified:false};state.campaign={name:'',crm:'',quarter:'',year:'',open:true};state.emails.length=0;state.emails.push(newEmail());state.form=null;state.cadence=null;state.qualified=null;cbRepaint();cbClearDraft();toast('Started fresh');}
+
 //// ============ EVENTS ============
 document.addEventListener('input',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
+  cbScheduleSave();
   const rte=ev.target.getAttribute&&ev.target.getAttribute('data-rte');
   if(rte){setRte(rte,ev.target.innerHTML);return;}
   const ff=ev.target.getAttribute&&ev.target.getAttribute('data-ff');
@@ -388,8 +601,15 @@ document.addEventListener('input',ev=>{if(!(ev.target.closest&&ev.target.closest
   else if(k.startsWith('f.')){const key=k.slice(2);
     if(key==='name'){const v=ev.target.value;state.form.name=v;state.form.nameEdited=v.trim()!=='';if(!state.form.nameEdited)updateFormName();const sub=document.getElementById('formSub');if(sub)sub.textContent='· '+effFormName();return;}
     state.form[key]=ev.target.value;}
+  else if(k.startsWith('cad.')){const rest=k.slice(4);
+    if(rest==='name'){const v=ev.target.value;state.cadence.name=v;state.cadence.nameEdited=v.trim()!=='';if(!state.cadence.nameEdited)updateCadenceName();const sub=document.getElementById('cadenceSub');if(sub)sub.textContent='· '+effCadenceName();return;}
+    const p=rest.split('.');state.cadence.steps[+p[0]][p[1]]=ev.target.value;}
+  else if(k.startsWith('q.')){const key=k.slice(2);
+    if(key==='name'){const v=ev.target.value;state.qualified.name=v;state.qualified.nameEdited=v.trim()!=='';if(!state.qualified.nameEdited)updateQualifiedName();const sub=document.getElementById('qualifiedSub');if(sub)sub.textContent='· '+effQualifiedName();return;}
+    state.qualified[key]=ev.target.value;}
 });
 document.addEventListener('change',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
+  cbScheduleSave();
   const ffr=ev.target.getAttribute&&ev.target.getAttribute('data-ffreq');if(ffr!==null&&ffr!==undefined){state.form.fields[+ffr].req=ev.target.checked;return;}
   const ffc=ev.target.getAttribute&&ev.target.getAttribute('data-ffcustom');if(ffc!==null&&ffc!==undefined){state.form.fields[+ffc].custom=ev.target.checked;return;}
   const k=ev.target.getAttribute('data-k');if(!k)return;
@@ -403,6 +623,7 @@ function addToken(key){const inp=document.querySelector(`[data-addtoken="${key}"
 function setRte(key,html){const p=key.split('.');if(p[0]==='e')state.emails[+p[1]].body=html;else if(p[0]==='f')state.form[p[1]]=html;}
 document.addEventListener('mousedown',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;if(ev.target.closest('.rte-btn'))ev.preventDefault();});
 document.addEventListener('click',ev=>{if(!(ev.target.closest&&ev.target.closest('#p-builder')))return;
+  cbScheduleSave();
   const rbtn=ev.target.closest('.rte-btn');
   if(rbtn){const cmd=rbtn.getAttribute('data-cmd');const tools=rbtn.closest('[data-rte-tools]');const key=tools.getAttribute('data-rte-tools');const ed=document.querySelector(`[data-rte="${key}"]`);
     if(ed){ed.focus();if(cmd==='createLink'){const url=prompt('Link URL:','https://');if(url)document.execCommand('createLink',false,url);}else{document.execCommand(cmd,false,null);}setRte(key,ed.innerHTML);}return;}
@@ -417,9 +638,11 @@ document.addEventListener('click',ev=>{if(!(ev.target.closest&&ev.target.closest
   const ffadd=ev.target.closest('[data-ffadd]');if(ffadd){state.form.fields.push({label:'',req:false,custom:true});renderForm();return;}
   const ffdel=ev.target.closest('[data-ffdel]');if(ffdel){state.form.fields.splice(+ffdel.getAttribute('data-ffdel'),1);renderForm();return;}
   const ct=ev.target.closest('[data-copytags]');if(ct){const i=ct.getAttribute('data-copytags');copyText((window['_tags'+i]||[]).join(', '),ct);return;}
+  const csa=ev.target.closest('[data-cadstepadd]');if(csa){state.cadence.steps.push({subject:'',body:''});renderCadence();return;}
+  const csd=ev.target.closest('[data-cadstepdel]');if(csd){state.cadence.steps.splice(+csd.getAttribute('data-cadstepdel'),1);renderCadence();return;}
   const tog=ev.target.closest('[data-toggle]');
   if(tog){const id=tog.getAttribute('data-toggle');const card=tog.closest('.cb-card');card.classList.toggle('collapsed');const collapsed=card.classList.contains('collapsed');
-    if(id==='campaign')state.campaign.open=!collapsed;else if(id==='form')state.form.open=!collapsed;else state.emails[+id].open=!collapsed;return;}
+    if(id==='campaign')state.campaign.open=!collapsed;else if(id==='form')state.form.open=!collapsed;else if(id==='cadence')state.cadence.open=!collapsed;else if(id==='qualified')state.qualified.open=!collapsed;else state.emails[+id].open=!collapsed;return;}
 });
 function copyText(t,btn){function done(){if(btn){btn.classList.add('copied');const o=btn.textContent;btn.textContent='Copied';setTimeout(()=>{btn.classList.remove('copied');btn.textContent=o;},1100);}}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done).catch(()=>{});else done();}
@@ -427,12 +650,12 @@ function copyText(t,btn){function done(){if(btn){btn.classList.add('copied');con
 document.getElementById('addEmail').addEventListener('click',()=>{const e=newEmail();e.open=true;state.emails.push(e);renderEmails();updateStatus();window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});});
 
 document.getElementById('generate').addEventListener('click',async()=>{
-  if(!state.include.email&&!state.include.form){alert('Select at least one thing to include (Email or Pardot Form) at the top.');return;}
+  if(!state.include.email&&!state.include.form&&!state.include.cadence&&!state.include.qualified){alert('Select at least one thing to include (Email, Pardot Form, SalesLoft Cadence, or Qualified Experience) at the top.');return;}
   const miss=missingRequired();
   if(miss.length&&!confirm(miss.length+' required field(s) still blank:\n\n'+miss.slice(0,12).join('\n')+(miss.length>12?'\n…':'')+'\n\nGenerate anyway?'))return;
   try{
     const c=state.campaign;const inc=state.include;
-    const data={include:{email:inc.email,form:inc.form},campaign:{name:c.name,crm:c.crm,quarterLabel:revLabel(QUARTERS,c.quarter),yearLabel:revLabel(YEARS,c.year)},
+    const data={include:{email:inc.email,form:inc.form,cadence:inc.cadence,qualified:inc.qualified},campaign:{name:c.name,crm:c.crm,quarterLabel:revLabel(QUARTERS,c.quarter),yearLabel:revLabel(YEARS,c.year)},
       emails:state.emails.map((e,i)=>{const r=computeEmail(i);return{
         number:e.hasOrder?(e.number||String(i+1)):'',hasOrder:e.hasOrder,pardotName:effPardot(i),tags:r.tags.map(x=>x.t).join(', '),
         emailType:revLabel(SENDTYPE,e.emailType),contentType:revLabel(CONTENT,e.contentType),audience:revLabel(AUDIENCE,e.audience),
@@ -445,6 +668,8 @@ document.getElementById('generate').addEventListener('click',async()=>{
       data.form={name:effFormName(),fields:f.fields.map(x=>({label:x.label,req:x.req,custom:x.custom})),
         previewLink:f.previewLink,iframe:f.iframe,source:f.source,leadSource:f.leadSource,slack:f.slack,
         autoresponder:f.autoresponder,displayMsg:f.displayMsg,tc:f.tc};}
+    if(inc.cadence&&state.cadence){const cd=state.cadence;data.cadence={name:effCadenceName(),steps:(cd.steps||[]).map(stp=>({subject:stp.subject,body:stp.body}))};}
+    if(inc.qualified&&state.qualified){const qd=state.qualified;data.qualified={name:effQualifiedName(),segment:qd.segment,headline:qd.headline,body:qd.body,imageUrl:qd.imageUrl,subtext:qd.subtext,ctas:qd.ctas};}
     let logo=null;
     try{const resp=await fetch(LOGO_URL,{mode:'cors'});if(resp&&resp.ok){const buf=new Uint8Array(await resp.arrayBuffer());const dim=pngSize(buf);if(dim)logo={bytes:buf,w:dim.w,h:dim.h};}}catch(e){/* logo blocked — fall back to text wordmark */}
     const bytes=buildDocx(data,logo);
@@ -458,9 +683,40 @@ document.getElementById('generate').addEventListener('click',async()=>{
 });
 let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
 
-// init — one email, everything collapsed
+var _impBtn=document.getElementById('importBtn'),_impFile=document.getElementById('importFile');
+if(_impBtn&&_impFile){
+  _impBtn.addEventListener('click',function(){_impFile.value='';_impFile.click();});
+  _impFile.addEventListener('change',async function(ev){
+    var f=ev.target.files&&ev.target.files[0];if(!f)return;
+    try{
+      var buf=new Uint8Array(await f.arrayBuffer());
+      var xml=await cbGetDocumentXml(buf);
+      var res=cbParseBuildDoc(xml);
+      applyImportedState(res.state);
+      var n=state.emails.length;
+      var bits=[];if(state.include.email)bits.push(n+' email'+(n!==1?'s':''));if(state.include.form)bits.push('form');
+      toast('Imported \u00b7 '+(bits.join(' + ')||'build doc'));
+      if(res.warnings&&res.warnings.length){console.warn('Import \u2014 review:',res.warnings);setTimeout(function(){alert(res.warnings.length+' field(s) need a quick look (value not in the current option list):\n\n'+res.warnings.slice(0,12).join('\n')+(res.warnings.length>12?'\n\u2026':''));},80);}
+      try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
+    }catch(err){console.error(err);toast(err&&err.message?err.message:'Could not read that .docx');}
+  });
+}
+
+// draft controls (direct element listeners — independent of the guarded document handlers)
+(function(){
+  var sb=document.getElementById('cbSaveDraftBtn'),lb=document.getElementById('cbLoadDraftBtn'),sf=document.getElementById('cbStartFresh'),df=document.getElementById('cbDraftFile');
+  if(sb)sb.addEventListener('click',cbDownloadDraft);
+  if(lb&&df)lb.addEventListener('click',function(){df.value='';df.click();});
+  if(df)df.addEventListener('change',function(ev){var f=ev.target.files&&ev.target.files[0];if(f)cbLoadDraftFile(f);});
+  if(sf)sf.addEventListener('click',cbStartFresh);
+  window.addEventListener('beforeunload',cbSaveNow);
+})();
+
+// init — restore a saved draft if present, else start with one empty email
 document.getElementById('timeopts').innerHTML=TIME_OPTS.map(t=>`<option value="${t}"></option>`).join('');
-state.emails.push(newEmail());
-renderScope();renderCampaign();renderEmails();showModules();updateRegMatch();updateStatus();
+var _cbRestored=cbLoadAutosave();
+if(!_cbRestored)state.emails.push(newEmail());
+renderScope();renderCampaign();renderEmails();showModules();updateAllOutputs();updateStatus();
+if(_cbRestored)setTimeout(function(){cbFlashDraft('Draft restored');},300);
 
 })();
