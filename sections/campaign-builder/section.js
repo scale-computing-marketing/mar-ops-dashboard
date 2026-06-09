@@ -93,8 +93,8 @@ function buildDocBody(data){const parts=[];const camp=data.campaign||{};const in
     parts.push(dsection('From \u2014 choose who it is sent from',[{label:'Sender Name',value:e.senderName||'Scale Computing'},{label:'From Email Address',value:e.fromEmail||'noreply@scalecomputing.com'},{label:'Reply-To Email Address',value:e.replyTo||'noreply@scalecomputing.com'}]));
     parts.push(dsection('Subject',[{label:'Subject Line A',value:e.subjectA,required:true},{label:'Subject Line B',value:e.subjectB},{label:'Preview Copy',value:e.preview}]));
     parts.push(dsection('External',[{label:'Send Date (MM/DD/YYYY)',value:e.sendDate},{label:'Send Time',value:e.sendTime}]));
-    const ebRows=[{label:'Hero Image',value:e.hero,valueColor:DC.link},{label:'Body Copy',value:e.body,html:true},{label:'Main CTA',value:e.mainCta}];
-    if((e.secCtaCopy&&String(e.secCtaCopy).trim())||(e.secCta&&String(e.secCta).trim())){ebRows.push({label:'Secondary CTA Copy',value:e.secCtaCopy},{label:'Secondary CTA',value:e.secCta});}
+    const ebRows=[{label:'Hero Image',value:e.hero,valueColor:DC.link},{label:'Body Copy',value:e.body,html:true},{label:'Main CTA \u2014 Button Text',value:e.mainCtaText},{label:'Main CTA \u2014 Link',value:e.mainCtaLink,valueColor:DC.link}];
+    if((e.secCtaText&&String(e.secCtaText).trim())||(e.secCtaLink&&String(e.secCtaLink).trim())){ebRows.push({label:'Secondary CTA \u2014 Button Text',value:e.secCtaText},{label:'Secondary CTA \u2014 Link',value:e.secCtaLink,valueColor:DC.link});}
     parts.push(dsection('Email build',ebRows));
   });
   if(inc.form&&data.form){const f=data.form;
@@ -180,7 +180,7 @@ function newQualified(){return{nameEdited:false,name:'',segment:'',headline:'',b
 const TC_TYPES=[];
 function newEmail(){return{pardotName:'',pardotEdited:false,hasOrder:true,number:'',emailType:'',contentType:'',audience:'',theme:'',ab:'No',cta:[],
   lists:'',suppressionList:DEFAULT_SUPPRESSION.slice(),senderName:'Scale Computing',fromEmail:'noreply@scalecomputing.com',replyTo:'noreply@scalecomputing.com',
-  subjectA:'',subjectB:'',preview:'',sendDate:'',sendTime:'',hero:'',body:'',mainCta:'',secCtaCopy:'',secCta:'',open:false};}
+  subjectA:'',subjectB:'',preview:'',sendDate:'',sendTime:'',hero:'',body:'',mainCtaText:'',mainCtaLink:'',secCtaText:'',secCtaLink:'',open:false};}
 
 //// ============ COMPUTE (Pardot name + tags) ============
 function isEvergreen(){return state.campaign.quarter==='na'||state.campaign.year==='na';}
@@ -306,7 +306,8 @@ function cbParseBuildDoc(xml){
       cur.sendDate=cbUnfmtDate(v(m,'Send Date (MM/DD/YYYY)'));cur.sendTime=v(m,'Send Time');
     } else if(cur&&t==='Email build'){m=mapOf(sec);
       cur.hero=v(m,'Hero Image');cur.body=cbParasToHtml(m['Body Copy']?m['Body Copy'].paras:[]);
-      cur.mainCta=v(m,'Main CTA');cur.secCtaCopy=v(m,'Secondary CTA Copy');cur.secCta=v(m,'Secondary CTA');
+      cur.mainCtaText=v(m,'Main CTA \u2014 Button Text')||v(m,'Main CTA');cur.mainCtaLink=v(m,'Main CTA \u2014 Link');
+      cur.secCtaText=v(m,'Secondary CTA \u2014 Button Text')||v(m,'Secondary CTA Copy');cur.secCtaLink=v(m,'Secondary CTA \u2014 Link')||v(m,'Secondary CTA');
     } else if(t==='Pardot Form'){if(!st.form)st.form=newForm();st.form.open=false;m=mapOf(sec);var nm=v(m,'Internal Name');if(nm)st.form.name=nm;
     } else if(st.form&&t==='Form Fields'){var fields=[];
       for(var r2=1;r2<sec.rows.length;r2++){var c2=sec.rows[r2];if(c2.length<2)continue;var lab=((c2[0]||[]).join(' ')).trim(),val2=(c2[1]||[]).join(' ');if(lab==='\u2014'||/No fields added/i.test(val2))continue;fields.push({label:lab,req:/Required/i.test(val2),custom:/Custom/i.test(val2)});}
@@ -390,6 +391,10 @@ function R(){return document.getElementById(ROOT);}
 /* ---- small helpers ---- */
 function escH(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function aesc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function ICON(n){var s='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex:0 0 auto">';
+  if(n==='copy')return s+'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+  if(n==='trash')return s+'<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>';
+  return s+'</svg>';}
 function prefix(){var c=state.campaign;return isEvergreen()?'':('Q'+(c.quarter||'?')+'-'+(c.year||'YYYY')+' | ');}
 function autoFormName(){return prefix()+(cleanName(state.campaign.name)||'Campaign name');}
 function autoCadenceName(){return autoFormName();}
@@ -533,7 +538,7 @@ function editorEmail(i){
     +fld({l:'CTA',type:'chips',opts:CTAOPTS,wide:true},e.cta,'e.'+i+'.cta');
   var fan='<div class="fan wide"><div class="fan-h">Create audience variants of this send</div>'
     +'<div class="cb-chips">'+AUDIENCE.map(function(a){return '<span class="cb-opt" data-fanaud="'+aesc(a[1])+'">'+escH(a[0])+'</span>';}).join('')+'</div>'
-    +'<button type="button" class="mini" data-fanout="'+i+'">Generate selected variants \u2192</button>'
+    +'<button type="button" class="cb-mini" data-fanout="'+i+'">Generate selected variants \u2192</button>'
     +'<span class="fan-note">Each variant is a new send with the audience set and a distinct Pardot name (\u2026 | Audience). Your current send is unchanged.</span></div>';
   var to=listSelectorHtml(i)+fld({l:'Suppression Lists',wide:true,type:'tokens',ph:'Add a suppression list\u2026'},e.suppressionList,'e.'+i+'.suppressionList');
   var from=fld({l:'Sender Name',ph:'Scale Computing'},e.senderName,'e.'+i+'.senderName')
@@ -546,14 +551,15 @@ function editorEmail(i){
     +fld({l:'Send Time',hint:'(15-min steps)',type:'time',ph:'10:00 AM EST'},e.sendTime,'e.'+i+'.sendTime');
   var build=fld({l:'Hero Image URL',wide:true,ph:'https://info.scalecomputing.com/...'},e.hero,'e.'+i+'.hero')
     +fld({l:'Body Copy',hint:'(rich text)',wide:true,type:'rte',ph:'Write the email body\u2026'},e.body,'e.'+i+'.body')
-    +fld({l:'Main CTA \u2014 button / link',wide:true,ph:'[Get Pricing] \u2192 https://www.scalecomputing.com/pricing'},e.mainCta,'e.'+i+'.mainCta')
-    +fld({l:'Secondary CTA \u2014 copy',hint:'(optional)',wide:true,type:'textarea'},e.secCtaCopy,'e.'+i+'.secCtaCopy')
-    +fld({l:'Secondary CTA \u2014 button / link',wide:true,ph:'[Schedule a Demo] \u2192 https://...'},e.secCta,'e.'+i+'.secCta');
+    +fld({l:'Main CTA \u2014 button text',ph:'Get Pricing'},e.mainCtaText,'e.'+i+'.mainCtaText')
+    +fld({l:'Main CTA \u2014 link',ph:'https://www.scalecomputing.com/pricing'},e.mainCtaLink,'e.'+i+'.mainCtaLink')
+    +fld({l:'Secondary CTA \u2014 button text',hint:'(optional)',ph:'Schedule a Demo'},e.secCtaText,'e.'+i+'.secCtaText')
+    +fld({l:'Secondary CTA \u2014 link',hint:'(optional)',ph:'https://...'},e.secCtaLink,'e.'+i+'.secCtaLink');
   var head='<div class="ed-head"><h2>'+escH(emailTitle(i))+'</h2>'
-    +'<div class="ed-acts"><button type="button" class="mini" data-dup="'+i+'">Duplicate</button>'
-    +(state.emails.length>1?'<button type="button" class="mini danger" data-del="'+i+'">Remove</button>':'')+'</div></div>';
+    +'<div class="ed-acts"><button type="button" class="cb-iconbtn" data-dup="'+i+'">'+ICON('copy')+'Duplicate</button>'
+    +(state.emails.length>1?'<button type="button" class="cb-iconbtn cb-danger" data-del="'+i+'">'+ICON('trash')+'Remove</button>':'')+'</div></div>';
   return head
-    +group('Tagging \u2014 feeds the tag builder',tagging)
+    +group('',tagging)
     +fan
     +group('To \u2014 audience &amp; lists',to)
     +group('From \u2014 sender',from)
@@ -570,7 +576,7 @@ function editorForm(){
     +'<label class="ff-chk"><input type="checkbox" data-ffreq="'+j+'" '+(fl.req?'checked':'')+'>Req</label>'
     +'<label class="ff-chk"><input type="checkbox" data-ffcustom="'+j+'" '+(fl.custom?'checked':'')+'>Custom</label>'
     +'<button class="ff-del" data-ffdel="'+j+'" title="Remove">\u00d7</button></div>';}).join('');
-  var fieldsGrp='<div class="grp"><div class="grp-h">Form fields</div><div class="ff-list">'+fieldsRows+'<button type="button" class="mini" data-ffadd>+ Add field</button></div></div>';
+  var fieldsGrp='<div class="grp"><div class="grp-h">Form fields</div><div class="ff-list">'+fieldsRows+'<button type="button" class="cb-mini" data-ffadd>+ Add field</button></div></div>';
   var comp=fld({l:'Source'},f.source,'f.source')+fld({l:'Detailed Lead Source'},f.leadSource,'f.leadSource')
     +fld({l:'Notify Slack Channel'},f.slack,'f.slack')
     +fld({l:'Send Email (Autoresponder)',wide:true,ph:'Autoresponder email name / link'},f.autoresponder,'f.autoresponder')
@@ -586,7 +592,7 @@ function editorCadence(){
   var steps=c.steps.map(function(stp,i){return '<div class="grp"><div class="grp-h">Email step '+(i+1)+(c.steps.length>1?' <button class="ff-del" data-cadstepdel="'+i+'" title="Remove">\u00d7</button>':'')+'</div><div class="grid">'
     +fld({l:'Subject Line',wide:true},stp.subject,'cad.'+i+'.subject')
     +fld({l:'Body Copy',wide:true,type:'textarea'},stp.body,'cad.'+i+'.body')+'</div></div>';}).join('');
-  return '<h2>SalesLoft Cadence</h2><p class="sub">'+escH(effCadenceName())+'</p>'+name+steps+'<button type="button" class="mini" data-cadstepadd>+ Add email step</button>';
+  return '<h2>SalesLoft Cadence</h2><p class="sub">'+escH(effCadenceName())+'</p>'+name+steps+'<button type="button" class="cb-mini" data-cadstepadd>+ Add email step</button>';
 }
 function editorQualified(){
   var q=state.qualified;if(!q)return '';
@@ -650,8 +656,8 @@ function renderRail(){
     var order=['Campaign','Send Type','Content Type','Audience','Theme','CTA'],by={};
     r.tags.forEach(function(x){(by[x.c]=by[x.c]||[]).push(x);});
     h+='<div class="rl-sec"><div class="rl-h">Pardot name</div><code class="rl-name">'+escH(effPardot(i))+'</code>'
-      +'<button type="button" class="mini" data-copyname="'+i+'">Copy</button></div>';
-    h+='<div class="rl-sec"><div class="rl-h">Tags <span class="rl-c">'+r.tags.length+'</span> <button type="button" class="mini" data-copytags="'+i+'">Copy all</button></div>';
+      +'<button type="button" class="cb-iconbtn" data-copyname="'+i+'">'+ICON('copy')+'Copy</button></div>';
+    h+='<div class="rl-sec"><div class="rl-h">Tags <span class="rl-c">'+r.tags.length+'</span> <button type="button" class="cb-iconbtn" data-copytags="'+i+'">'+ICON('copy')+'Copy all</button></div>';
     h+=order.filter(function(c){return by[c];}).map(function(c){return '<div class="rl-cat">'+c+'</div><div class="cb-chips cb-sm">'+by[c].map(function(x){return '<span class="cb-tag'+(x.req?' req':'')+'">'+escH(x.t)+'</span>';}).join('')+'</div>';}).join('');
     h+='</div>';
     var miss=['emailType','contentType','audience','theme','subjectA'];var labels={emailType:'Email type',contentType:'Content type',audience:'Audience',theme:'Theme',subjectA:'Subject A'};
@@ -670,8 +676,8 @@ function renderRail(){
   el.innerHTML=h;
 }
 function updateStatus(){
-  var miss=missingRequired();var el=document.getElementById('cb-status');
-  if(el)el.innerHTML=miss.length?('<span class="warn">'+miss.length+' required field'+(miss.length!==1?'s':'')+' blank</span>'):'<span class="ok">Required fields complete</span>';
+  var miss=missingRequired();var el=document.getElementById('cb-gencount');
+  if(el){if(miss.length){el.textContent=miss.length;el.title=miss.length+' required field'+(miss.length!==1?'s':'')+' blank';el.style.display='';}else{el.textContent='';el.style.display='none';}}
 }
 
 /* ---- legacy render names used by import/draft code → repaint ---- */
@@ -786,7 +792,7 @@ async function doGenerate(){
         theme:revLabel(THEME,e.theme),abTest:e.ab||'No',cta:(e.cta||[]).map(function(t){return revLabel(CTAOPTS,t);}).join(', '),
         lists:e.lists,suppression:(e.suppressionList||[]).join('\n'),senderName:e.senderName,fromEmail:e.fromEmail,replyTo:e.replyTo,
         subjectA:e.subjectA,subjectB:e.subjectB,preview:e.preview,sendDate:fmtDate(e.sendDate),sendTime:e.sendTime,
-        hero:e.hero,body:e.body,mainCta:e.mainCta,secCtaCopy:e.secCtaCopy,secCta:e.secCta};})};
+        hero:e.hero,body:e.body,mainCtaText:e.mainCtaText,mainCtaLink:e.mainCtaLink,secCtaText:e.secCtaText,secCtaLink:e.secCtaLink};})};
     if(inc.form&&state.form){var f=state.form;data.form={name:effFormName(),fields:f.fields.map(function(x){return{label:x.label,req:x.req,custom:x.custom};}),previewLink:f.previewLink,iframe:f.iframe,source:f.source,leadSource:f.leadSource,slack:f.slack,autoresponder:f.autoresponder,displayMsg:f.displayMsg,tc:f.tc};}
     if(inc.cadence&&state.cadence){var cd=state.cadence;data.cadence={name:effCadenceName(),steps:(cd.steps||[]).map(function(s){return{subject:s.subject,body:s.body};})};}
     if(inc.qualified&&state.qualified){var qd=state.qualified;data.qualified={name:effQualifiedName(),segment:qd.segment,headline:qd.headline,body:qd.body,imageUrl:qd.imageUrl,subtext:qd.subtext,ctas:qd.ctas};}
