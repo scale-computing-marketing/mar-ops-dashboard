@@ -1,11 +1,15 @@
-<!-- Campaign Builder — mounted into #p-builder by the dashboard loader.
-     No .page wrapper and no <script> here (the loader adds those). -->
-<div class="cb-topbar">
-  <div class="cb-tb-l">
-    <span class="cb-brand">Campaign Builder</span>
-    <span class="cb-brand-sub">Build &amp; tag a campaign, then export the Word doc</span>
-  </div>
-  <div class="cb-tb-r">
+<!-- Campaign Builder — mounted into #p-builder (class "page gov-ed") by the loader.
+     Reuses the dashboard's gov-ed editorial classes so it matches Tag Library,
+     Resources, Technology, etc. No .page wrapper and no <script> here. -->
+<header class="ed-masthead cb-mast">
+  <p class="ed-kicker">Governance · Campaign Builder</p>
+  <h1>Assemble &amp; <em>tag</em> a campaign</h1>
+  <p class="ed-lede">Compose the emails, Pardot form, SalesLoft cadence, and Qualified experience for a single campaign — then export the Word build doc, tags and all.</p>
+</header>
+
+<div class="cb-bar">
+  <div class="cb-scope-row" id="cb-scope"></div>
+  <div class="cb-actions">
     <span id="cbDraftState" class="cb-draft-state"></span>
     <span id="cb-status"></span>
     <button class="cb-mini" data-draftsave>Save draft</button>
@@ -15,8 +19,6 @@
     <button class="cb-primary" data-gen>Generate Word doc</button>
   </div>
 </div>
-
-<div class="cb-scope-row" id="cb-scope"></div>
 
 <div class="cb-panes">
   <aside class="cb-tree" id="cb-tree"></aside>
