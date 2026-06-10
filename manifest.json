@@ -1,5 +1,6 @@
 {
   "_comment": "Sections loaded dynamically into the dashboard shell at runtime. Add an entry + a folder under sections/<id>/ to add a section. Must be served over HTTP (e.g. GitHub Pages); file:// will not work because the loader uses fetch().",
+  "version": "2026-06-10",
   "sections": [
     {
       "id": "builder",
@@ -16,22 +17,6 @@
       "html": "sections/campaign-builder/section.html",
       "css": "sections/campaign-builder/section.css",
       "js": "sections/campaign-builder/section.js"
-    },
-    {
-      "id": "exec-overview",
-      "title": "\u21b3 Executive Overview",
-      "navGroup": "Performance",
-      "navIcon": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1\"/></svg>",
-      "badge": "Exec",
-      "breadcrumb": {
-        "group": "Performance",
-        "leaf": "Math of Sales <span class=\"bc-sep\">/</span> Executive Overview"
-      },
-      "pageClass": "page gov-ed",
-      "pageStyle": "padding:24px 28px;max-width:1320px;margin:0 auto;",
-      "html": "sections/exec-overview/section.html",
-      "css": "sections/exec-overview/section.css",
-      "js": "sections/exec-overview/section.js"
     }
   ]
 }

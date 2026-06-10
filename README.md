@@ -1,16 +1,19 @@
 # Scale Computing Marketing Ops Dashboard — modular structure
 
 The dashboard is now split so a **single section can be edited without touching the
-rest of the file**. The big `dashboard.html` shell stays put; each modular section
+rest of the file**. The big `index.html` shell stays put; each modular section
 lives in its own small folder and is pulled in at runtime from `manifest.json`.
 
 ## Repo layout
 
 ```
 /
-├─ dashboard.html              ← shell: sidebar, masthead, existing inline sections,
+├─ index.html              ← shell: sidebar, masthead, existing inline sections,
 │                                and the section loader (reads manifest.json)
 ├─ manifest.json               ← list of dynamically-loaded sections + their metadata
+├─ vendor/
+│  └─ docx.bundle.js            ← Word-export engine (docx + JSZip + pako), loaded on
+│                                demand the first time someone exports — not on page load
 └─ sections/
    └─ campaign-builder/
       ├─ section.html          ← markup mounted into the page (no <script>, no .page wrapper)
@@ -21,10 +24,10 @@ lives in its own small folder and is pulled in at runtime from `manifest.json`.
 ## Important: it must be served (GitHub Pages)
 
 The loader uses `fetch()` to pull in each section, so the dashboard has to be served
-over HTTP. GitHub Pages does this automatically. Opening `dashboard.html` directly from
+over HTTP. GitHub Pages does this automatically. Opening `index.html` directly from
 your hard drive (a `file://` URL) **will not load the sections** — the browser blocks
 `fetch()` of local files. For a quick local preview, run a tiny server from the repo
-root, e.g. `python3 -m http.server` and open `http://localhost:8000/dashboard.html`.
+root, e.g. `python3 -m http.server` and open `http://localhost:8000/index.html`.
 
 ## Updating the Campaign Builder
 
@@ -58,6 +61,11 @@ Conventions that keep sections from colliding:
 
 ## manifest.json fields
 
+The manifest also takes one optional **top-level** field, `version` (a string). When
+present, the loader appends `?v=<version>` to every section file it fetches, so bumping
+it forces browsers to pull the new `section.html`/`.css`/`.js` instead of a cached copy.
+Leave it out and files are fetched with normal browser caching.
+
 | Field        | Purpose                                                              |
 |--------------|----------------------------------------------------------------------|
 | `id`         | Section id. The page becomes `#p-<id>`; nav uses `data-nav="<id>"`.   |
@@ -68,9 +76,9 @@ Conventions that keep sections from colliding:
 | `breadcrumb` | `{ "group": "...", "leaf": "..." }` shown in the header breadcrumb.   |
 | `pageClass`  | Class for the mounted page element (e.g. `page gov-ed`).             |
 | `pageStyle`  | Inline style for the page element (padding / max-width / centering). |
-| `html`/`css`/`js` | Paths (relative to `dashboard.html`) to the section's files.    |
+| `html`/`css`/`js` | Paths (relative to `index.html`) to the section's files.    |
 
-## How the loader works (in `dashboard.html`)
+## How the loader works (in `index.html`)
 
 On load it fetches `manifest.json`, then for each section: creates the `.page` element,
 injects `section.html`, links `section.css`, registers the breadcrumb + badge, adds the

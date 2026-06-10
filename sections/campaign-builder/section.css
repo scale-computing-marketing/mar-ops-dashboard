@@ -1,12 +1,31 @@
-/* Campaign Builder — scoped under #p-builder, which the loader gives class
-   "page gov-ed". We adopt the dashboard's gov-ed editorial system: Fraunces
-   headings, JetBrains Mono labels/tags, and the --ed-* palette (inherited from
-   .gov-ed). The .ed-masthead/.ed-kicker header reuses the shell's own classes
-   so it matches Tag Library / Resources / Technology exactly. */
+/* Campaign Builder — scoped under #p-builder. The loader normally gives the page
+   class "page gov-ed", so it inherits the dashboard's gov-ed editorial system
+   (Fraunces headings, JetBrains Mono labels/tags, the --ed-* palette). To keep the
+   section self-contained per the repo convention ("scope every rule under #p-<id>,
+   define custom properties on #p-<id>"), we restate the --ed-* tokens and the base
+   .ed-masthead/.ed-kicker/.ed-lede rules here too, so the header renders correctly
+   even if the page is ever mounted without the gov-ed class. */
 
-#p-builder{ --cb-ok:#2f8f4e; --cb-warn:#b4690e; --cb-red:#e3004b; }
+#p-builder{
+  --cb-ok:#2f8f4e; --cb-warn:#b4690e; --cb-red:#e3004b;
+  /* editorial palette — mirrors .gov-ed so the section stands on its own */
+  --ed-ink:#19202b; --ed-navy:#0a2540; --ed-blue:#1e88e5;
+  --ed-link:#0a5db5; --ed-magenta:#9c2e91; --ed-line:#e3ddd0;
+  --ed-mono:#5b6675; --ed-soft:#f7f9fc; --ed-chipbg:#faf8f3;
+}
 
-/* let the masthead use the shell's gov-ed styling untouched; just cap its size a touch */
+/* Base editorial masthead, scoped to this section (id specificity beats the shared
+   .gov-ed rules when both apply, and provides styling when gov-ed is absent). */
+#p-builder .ed-masthead{padding:14px 0 36px;border-bottom:1px solid var(--ed-line);margin-bottom:10px;}
+#p-builder .ed-kicker{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;
+  letter-spacing:3.5px;text-transform:uppercase;color:var(--ed-blue);margin:0 0 18px;}
+#p-builder .ed-masthead h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(32px,5vw,52px);
+  line-height:1.04;font-weight:600;letter-spacing:-1.5px;margin:0 0 20px;color:var(--ed-ink);}
+#p-builder .ed-masthead h1 em{font-style:italic;font-weight:400;color:var(--ed-navy);}
+#p-builder .ed-lede{font-family:'Fraunces',Georgia,serif;font-size:18px;line-height:1.55;
+  max-width:66ch;margin:0;color:#3a4351;font-weight:400;}
+
+/* cap the masthead size a touch for this section */
 #p-builder .cb-mast h1{font-size:clamp(28px,4vw,40px);margin-bottom:14px;}
 #p-builder .cb-mast{padding-bottom:22px;margin-bottom:0;}
 
