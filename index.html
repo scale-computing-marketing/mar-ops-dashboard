@@ -3428,6 +3428,35 @@ input[type=text]:focus, select:focus{
 #cb-library .block-head{padding:22px 20px;}
 }
 </style>
+<style id="dash-type-unify">
+/* ===================== Unified type & component system =====================
+   Override layer: converges the older sections onto the gov-ed editorial
+   system (Fraunces / JetBrains Mono / DM Sans). Loaded last so it wins. */
+
+/* Breadcrumb — match the editorial kicker (JetBrains Mono) */
+.hero-label,.kicker{font-family:'JetBrains Mono',monospace!important;font-weight:700!important;font-size:11px!important;letter-spacing:3.5px!important;text-transform:uppercase!important;color:#1e88e5!important;margin:0 0 18px!important;}
+
+/* Lede — smaller, DM Sans (beats .gov-ed / #p-forms / .perf-masthead variants) */
+.ed-lede,.lede{font-family:'DM Sans',sans-serif!important;font-size:14px!important;line-height:1.55!important;max-width:62ch!important;font-weight:400!important;margin:0!important;}
+
+/* Side navigation — JetBrains Mono to match the breadcrumb */
+.sidebar .nav-item{font-family:'JetBrains Mono',monospace!important;font-size:12.5px!important;font-weight:500!important;letter-spacing:.2px!important;text-transform:none!important;}
+.sidebar .nav-item.active{font-weight:600!important;}
+.sidebar .nav-group-label{font-family:'JetBrains Mono',monospace!important;font-size:10.5px!important;font-weight:700!important;letter-spacing:2px!important;text-transform:uppercase!important;}
+
+/* Pills / chips / tags — one font + one pill shape everywhere */
+.pill,.chip,.cat-chip,.tag-chip,.pg-tag,.camp-tag,.camp-pill,.cv-meta-pill,.tb-tag,.tb-pill,.imp-tag,.tag-rule{
+  font-family:'JetBrains Mono',monospace!important;border-radius:999px!important;}
+/* Neutral pills → cream + hairline (status pills above keep their colour) */
+.pill,.chip,.cat-chip,.tag-chip,.pg-tag,.camp-tag,.cv-meta-pill,.tb-tag{
+  font-size:11px!important;font-weight:500!important;letter-spacing:normal!important;text-transform:none!important;
+  background:#faf8f3;border:1px solid #e3ddd0;color:#5b6675;}
+
+/* Mastheads — all sized like the Campaigns reference (.perf-masthead) */
+.ed-masthead h1,.masthead h1{font-family:'Fraunces',Georgia,serif!important;font-size:clamp(30px,4.4vw,46px)!important;line-height:1.05!important;font-weight:600!important;letter-spacing:-1.4px!important;margin:0 0 18px!important;color:#19202b!important;}
+.ed-masthead h1 em,.masthead h1 em{font-style:italic!important;font-weight:400!important;color:#0a2540!important;}
+.ed-masthead,.masthead{padding:14px 0 34px!important;margin-bottom:24px!important;border-bottom:1px solid #e3ddd0!important;}
+</style>
 <div id="cb-library">
 <div class="wrap">
 <header class="masthead">
