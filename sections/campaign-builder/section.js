@@ -71,7 +71,7 @@ function drow(label,value,o){o=o||{};const vc=o.valueColor||DC.body;const lbl=`<
 function dtable(rows){return`<w:tbl><w:tblPr><w:tblW w:w="${FW}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${LW}"/><w:gridCol w:w="${VW}"/></w:tblGrid>${rows}</w:tbl>`;}
 const dspacer=()=>`<w:p><w:pPr><w:spacing w:before="0" w:after="0"/><w:rPr><w:sz w:val="12"/></w:rPr></w:pPr></w:p>`;
 function dheading(text,size,before,after,border){return`<w:p><w:pPr>${border?`<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="6" w:color="${DC.border}"/></w:pBdr>`:''}<w:spacing w:before="${before}" w:after="${after}"/></w:pPr><w:r><w:rPr>${ARIAL}<w:b/><w:color w:val="${DC.navy}"/><w:sz w:val="${size}"/></w:rPr><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;}
-function titleBlock(camp){const q=camp.quarterLabel&&camp.quarterLabel!=='N/A'?camp.quarterLabel:'';const y=camp.yearLabel&&camp.yearLabel!=='N/A'?camp.yearLabel:'';
+function titleBlock(camp){var EVG=function(v){return !v||v==='N/A'||v==='Evergreen';};const q=EVG(camp.quarterLabel)?'':camp.quarterLabel;const y=EVG(camp.yearLabel)?'':camp.yearLabel;
   let dt='';try{dt=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}catch(e){}
   const meta=[(q||y)?((q?q+' ':'')+y).trim():'',dt?('Generated '+dt):''].filter(Boolean).join('  \u00b7  ');
   const eyebrow=`<w:p><w:pPr><w:spacing w:before="0" w:after="50"/></w:pPr><w:r><w:rPr>${ARIAL}<w:b/><w:color w:val="${DC.red}"/><w:sz w:val="18"/><w:spacing w:val="60"/></w:rPr><w:t xml:space="preserve">CAMPAIGN BUILD</w:t></w:r></w:p>`;
@@ -151,10 +151,10 @@ const AUDIENCE=[['Customer','audience-customer'],['Partner','audience-partner'],
 const FUNNEL=[['Top of funnel (awareness)','stage-tofu'],['Middle of funnel (consideration)','stage-mofu'],['Bottom of funnel (decision)','stage-bofu'],['Nurture','stage-nurture'],['Retention','stage-retention'],['Expansion','stage-expansion'],['Advocacy','stage-advocacy']];
 const CONTENT=['content-webinar-invite','content-webinar-followup','content-post-event','content-event-invite','content-event-reminder','content-gated-content','content-report-syndication','content-product-launch','content-case-study','content-survey','content-award','content-holiday-card','content-meeting-maker','content-review-solicitation','content-save-the-date','content-partner-enablement','content-support-notice','content-customer-referral-program'].map(t=>[labelOf(t,/^content-/),t]);
 const THEME=['theme-vmware-alternative','theme-platform-event','theme-vdi','theme-edge-computing','theme-ransomware-bcdr','theme-retail','theme-healthcare','theme-education','theme-sysadmin','theme-partner-program','theme-product-launch','theme-gartner','theme-dcig','theme-anniversary','theme-customer-advocacy','theme-demo','theme-channel-advocacy'].map(t=>[labelOf(t,/^theme-/),t]).map(p=>p[1]==='theme-dcig'?['DCIG','theme-dcig']:p);
-const CTAOPTS=['cta-pricing','cta-demo','cta-contact','cta-learn-more','cta-register','cta-survey','cta-partner-portal','cta-trial','cta-download','cta-vmware-alternative'].map(t=>[labelOf(t,/^cta-/),t]);
+const CTAOPTS=['cta-pricing','cta-demo','cta-contact','cta-learn-more','cta-register','cta-survey','cta-partner-portal','cta-trial','cta-download','cta-watch','cta-vmware-alternative'].map(t=>[labelOf(t,/^cta-/),t]);
 const AB=[['No','No'],['Yes','Yes']];
-const QUARTERS=[['Q1','1'],['Q2','2'],['Q3','3'],['Q4','4'],['N/A','na']];
-const YEARS=[['2025','2025'],['2026','2026'],['2027','2027'],['2028','2028'],['N/A','na']];
+const QUARTERS=[['Q1','1'],['Q2','2'],['Q3','3'],['Q4','4'],['Evergreen','na']];
+const YEARS=[['2025','2025'],['2026','2026'],['2027','2027'],['2028','2028'],['Evergreen','na']];
 const TIME_OPTS=(function(){const out=['As soon as available'];for(let h=0;h<24;h++){for(let m=0;m<60;m+=15){const ap=h<12?'AM':'PM';let hh=h%12;if(hh===0)hh=12;out.push(hh+':'+String(m).padStart(2,'0')+' '+ap+' EST');}}return out;})();
 const DEFAULT_SUPPRESSION=['Suppression | Global','SC Employees'];
 function fmtDate(v){if(!v)return '';const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[2]+'/'+m[3]+'/'+m[1]):v;}
@@ -287,7 +287,8 @@ function cbParseBuildDoc(xml){
     var sec=sections[s],t=sec.title,m;
     if(t==='Campaign'){m=mapOf(sec);
       st.campaign.name=v(m,'Campaign Name');st.campaign.crm=v(m,'CRM Campaign Link');
-      st.campaign.quarter=cbLabelToValue(QUARTERS,v(m,'Quarter'));st.campaign.year=cbLabelToValue(YEARS,v(m,'Year'));
+      st.campaign.quarter=cbLabelToValue(QUARTERS,v(m,'Quarter'))||(/^(n\/a|evergreen)$/i.test((v(m,'Quarter')||'').trim())?'na':'');
+      st.campaign.year=cbLabelToValue(YEARS,v(m,'Year'))||(/^(n\/a|evergreen)$/i.test((v(m,'Year')||'').trim())?'na':'');
     } else if(t==='Basic email information'){cur=newEmail();cur.open=false;st.emails.push(cur);m=mapOf(sec);
       var pn=v(m,'Pardot Email Name');if(pn)cur.pardotName=pn;
     } else if(cur&&t.indexOf('Tagging')===0){m=mapOf(sec);
@@ -409,9 +410,15 @@ function updateCrmLine(){}
 function setRte(key,html){var p=key.split('.');if(p[0]==='e')state.emails[+p[1]].body=html;else if(p[0]==='f')state.form[p[1]]=html;}
 
 /* ---- required-field tracking ---- */
+/* Each entry is {label, type, i, key} so the right rail can deep-link to the
+   exact field: clicking it activates the node and focuses the input. */
 function missingRequired(){var m=[];var c=state.campaign;var inc=state.include;
-  if(inc.email||inc.form||inc.cadence||inc.qualified){if(!c.name.trim())m.push('Campaign Name');if(!c.quarter)m.push('Quarter');if(!c.year)m.push('Year');}
-  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push('Email '+(i+1)+' · '+p[1]);});});
+  if(inc.email||inc.form||inc.cadence||inc.qualified){
+    if(!c.name.trim())m.push({label:'Campaign Name',type:'campaign',i:null,key:'c.name'});
+    if(!c.quarter)m.push({label:'Quarter',type:'campaign',i:null,key:'c.quarter'});
+    if(!c.year)m.push({label:'Year',type:'campaign',i:null,key:'c.year'});
+  }
+  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push({label:'Email '+(i+1)+' · '+p[1],type:'email',i:i,key:'e.'+i+'.'+p[0]});});});
   return m;}
 function emailComplete(i){var e=state.emails[i];return ['emailType','contentType','audience','theme','subjectA'].every(function(k){return String(e[k]||'').trim();});}
 
@@ -522,8 +529,9 @@ function editorCampaign(){
     +fld({l:'CRM Campaign Link',wide:true,ph:'https://scalecomputing.lightning.force.com/...'},c.crm,'c.crm')
     +fld({l:'Quarter',req:true,type:'select',opts:QUARTERS},c.quarter,'c.quarter')
     +fld({l:'Year',req:true,type:'select',opts:YEARS},c.year,'c.year');
-  var match=reg?'<div class="reg-ok">Registry match \u00b7 tag <code>'+escH(reg.tag)+'</code>'+(reg.salesloft?' \u00b7 SalesLoft-enabled':'')+'</div>':'<div class="reg-no">No registry match \u2014 a slug tag will be generated from the name.</div>';
-  return '<h2>Campaign</h2><p class="sub">Shared by every send, form, and cadence in this build.</p>'+group('',inner)+match;
+  var ever=isEvergreen()?'<p class="cb-evg-note">Evergreen selected — Pardot names and tags will skip the <code>Qx-YYYY</code> prefix.</p>':'';
+  var match='';
+  return '<h2>Campaign</h2><p class="sub">Shared by every send, form, and cadence in this build.</p>'+group('',inner)+ever+match;
 }
 function editorEmail(i){
   var e=state.emails[i];
@@ -667,11 +675,14 @@ function renderRail(){
     window['_tags'+i]=r.tags.map(function(x){return x.t;});
   } else {
     var miss=missingRequired();
-    var inc=state.include,bits=[];
-    if(inc.email)bits.push(state.emails.length+' email send'+(state.emails.length!==1?'s':''));
-    if(inc.form)bits.push('Pardot form');if(inc.cadence)bits.push('SalesLoft cadence');if(inc.qualified)bits.push('Qualified experience');
-    h+='<div class="rl-sec"><div class="rl-h">This build</div>'+(bits.length?bits.map(function(b){return '<div class="ck ok">\u2713 '+escH(b)+'</div>';}).join(''):'<div class="muted">Nothing selected</div>')+'</div>';
-    h+='<div class="rl-sec"><div class="rl-h">Required fields</div>'+(miss.length?('<div class="ck warn">'+miss.length+' still blank</div>'+miss.slice(0,8).map(function(m){return '<div class="ck">\u25cb '+escH(m)+'</div>';}).join('')+(miss.length>8?'<div class="muted">\u2026and '+(miss.length-8)+' more</div>':'')):'<div class="ck ok">\u2713 All complete</div>')+'</div>';
+    /* On non-email views the rail is just the required-fields summary — the
+       "this build" recap duplicated the scope pills and the outline tree, so
+       it's dropped. Each blank field is a deep link (see data-jump* handler). */
+    h+='<div class="rl-sec"><div class="rl-h">Required fields</div>'+(miss.length
+      ?('<div class="ck warn">'+miss.length+' still blank</div>'
+        +miss.slice(0,8).map(function(m){return '<div class="ck ck-jump" role="button" tabindex="0" data-jump-type="'+escH(m.type)+'" data-jump-i="'+(m.i==null?'':m.i)+'" data-jump-key="'+escH(m.key)+'">\u25cb '+escH(m.label)+'</div>';}).join('')
+        +(miss.length>8?'<div class="muted">\u2026and '+(miss.length-8)+' more</div>':''))
+      :'<div class="ck ok">\u2713 All complete</div>')+'</div>';
   }
   el.innerHTML=h;
 }
@@ -722,12 +733,16 @@ document.addEventListener('change',function(ev){if(!inApp(ev))return;cbScheduleS
   var ffc=t.getAttribute('data-ffcustom');if(ffc!=null){state.form.fields[+ffc].custom=t.checked;return;}
   var k=t.getAttribute('data-k');if(!k)return;
   if(t.type==='checkbox'&&k.indexOf('e.')===0){var p=k.split('.');state.emails[+p[1]][p[2]]=t.checked;renderEditor();renderTree();return;}
-  if(k.indexOf('c.')===0){state.campaign[k.slice(2)]=t.value;renderTree();renderRail();updateStatus();}
+  if(k.indexOf('c.')===0){state.campaign[k.slice(2)]=t.value;renderEditor();renderTree();renderRail();updateStatus();}
   else if(k.indexOf('e.')===0){var p2=k.split('.');if(p2[2]==='pardotName')return;state.emails[+p2[1]][p2[2]]=t.value;renderRail();renderTree();updateStatus();}
   else if(k.indexOf('f.')===0)state.form[k.slice(2)]=t.value;
 });
 document.addEventListener('keydown',function(ev){if(!inApp(ev))return;
   var t=ev.target;
+  var jk=t.closest&&t.closest('[data-jump-key]');
+  if(jk&&(ev.key==='Enter'||ev.key===' '||ev.key==='Spacebar')){ev.preventDefault();
+    var jt=jk.getAttribute('data-jump-type'),ji=jk.getAttribute('data-jump-i'),jkey=jk.getAttribute('data-jump-key');
+    active={type:jt,i:ji===''?0:+ji};renderTree();renderEditor();renderRail();focusField(jkey);return;}
   if(t.getAttribute('data-lstsearch')!=null&&ev.key==='Enter'){ev.preventDefault();var i=active.i;var ranked=rankLists(lstQuery);
     if(ranked.length&&ranked[0].n.toLowerCase()===lstQuery.trim().toLowerCase()){listToggle(i,ranked[0].n);}
     else if(lstQuery.trim()){var arr=listItems(i);if(arr.indexOf(lstQuery.trim())<0){arr.push(lstQuery.trim());listSet(i,arr);}lstQuery='';}
@@ -738,6 +753,9 @@ document.addEventListener('mousedown',function(ev){if(!inApp(ev))return;if(ev.ta
 document.addEventListener('click',function(ev){if(!inApp(ev))return;cbScheduleSave();
   var t=ev.target;
   var node=t.closest('[data-node]');if(node){var d=node.getAttribute('data-node').split('.');active={type:d[0],i:d[1]!=null?+d[1]:0};renderTree();renderEditor();renderRail();return;}
+  var jump=t.closest('[data-jump-key]');if(jump){
+    var jt=jump.getAttribute('data-jump-type'),ji=jump.getAttribute('data-jump-i'),jk=jump.getAttribute('data-jump-key');
+    active={type:jt,i:ji===''?0:+ji};renderTree();renderEditor();renderRail();focusField(jk);return;}
   var add=t.closest('[data-addemail]');if(add){var e=newEmail();e.open=true;state.emails.push(e);active={type:'email',i:state.emails.length-1};renderTree();renderEditor();renderRail();updateStatus();return;}
   var sc=t.closest('[data-scope]');if(sc){var key=sc.getAttribute('data-scope');state.include[key]=!state.include[key];
     if(key==='email'&&state.include.email&&!state.emails.length)state.emails.push(newEmail());
@@ -770,6 +788,18 @@ document.addEventListener('click',function(ev){if(!inApp(ev))return;cbScheduleSa
   var df2=t.closest('[data-draftfresh]');if(df2){cbStartFresh();active={type:'campaign'};repaint();return;}
 });
 function focusList(){var el=document.getElementById('cb-lstsearch');if(el){el.focus();var v=el.value;el.value='';el.value=v;}}
+function focusField(key){
+  /* deferred so the freshly rendered editor is in the DOM */
+  requestAnimationFrame(function(){
+    var f=document.querySelector('#cb-editor [data-k="'+(window.CSS&&CSS.escape?CSS.escape(key):key)+'"]');
+    if(!f){var all=document.querySelectorAll('#cb-editor [data-k]');for(var i=0;i<all.length;i++){if(all[i].getAttribute('data-k')===key){f=all[i];break;}}}
+    if(!f)return;
+    try{f.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){f.scrollIntoView();}
+    var host=f.closest('.cbf')||f;
+    host.classList.add('cb-flash');setTimeout(function(){host.classList.remove('cb-flash');},1200);
+    setTimeout(function(){try{f.focus({preventScroll:true});}catch(e){f.focus();}},120);
+  });
+}
 function addSup(key){var inp=document.querySelector('[data-supinput="'+key+'"]');if(!inp)return;var v=inp.value.trim();if(!v)return;var p=key.split('.');state.emails[+p[1]][p[2]].push(v);renderEditor();}
 function fanOut(srcIndex,audVals){if(!audVals||!audVals.length){toast('Pick one or more audiences first');return;}
   var at=srcIndex+1;
@@ -781,7 +811,7 @@ function fanOut(srcIndex,audVals){if(!audVals||!audVals.length){toast('Pick one 
 async function doGenerate(){
   if(!state.include.email&&!state.include.form&&!state.include.cadence&&!state.include.qualified){alert('Select at least one thing to include at the top (Email, Form, Cadence, or Qualified).');return;}
   var miss=missingRequired();
-  if(miss.length&&!confirm(miss.length+' required field(s) still blank:\n\n'+miss.slice(0,12).join('\n')+(miss.length>12?'\n\u2026':'')+'\n\nGenerate anyway?'))return;
+  if(miss.length&&!confirm(miss.length+' required field(s) still blank:\n\n'+miss.slice(0,12).map(function(x){return x.label;}).join('\n')+(miss.length>12?'\n\u2026':'')+'\n\nGenerate anyway?'))return;
   try{
     var c=state.campaign,inc=state.include;
     var data={include:{email:inc.email,form:inc.form,cadence:inc.cadence,qualified:inc.qualified},

@@ -32,6 +32,7 @@
   #p-builder .cb-actions .cb-div{display:none}
 }
 #p-builder .cb-uicon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:30px;border:0;background:transparent;color:var(--ed-mono);border-radius:8px;cursor:pointer;transition:all .15s}
+#p-builder .cb-uicon.cb-labeled{width:auto;gap:6px;padding:0 11px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.03em}
 #p-builder .cb-uicon:hover{background:var(--ed-soft);color:var(--ed-navy)}
 #p-builder .cb-uicon.cb-danger:hover{background:#fcebec;color:var(--cb-red)}
 #p-builder .cb-div{width:1px;height:20px;background:var(--ed-line);margin:0 4px}
@@ -68,7 +69,7 @@
 /* ── three-pane workspace as one editorial card ── */
 #p-builder .cb-panes{display:grid;grid-template-columns:248px minmax(0,1fr) 268px;align-items:start;
   background:#fff;border:1px solid var(--ed-line);border-radius:14px;
-  box-shadow:0 1px 0 rgba(0,0,0,.02),0 22px 44px -30px rgba(25,32,43,.45);min-height:60vh}
+  box-shadow:0 1px 0 rgba(0,0,0,.02),0 22px 44px -30px rgba(25,32,43,.45);min-height:460px}
 #p-builder .cb-tree{position:sticky;top:88px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;border-right:1px solid var(--ed-line);padding:16px 12px}
 #p-builder .cb-editor{padding:22px 26px;min-width:0}
 #p-builder .cb-rail{position:sticky;top:88px;align-self:start;max-height:calc(100vh - 108px);overflow:auto;border-left:1px solid var(--ed-line);padding:18px 16px}
@@ -182,6 +183,16 @@
 #p-builder .ck{font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--ed-mono);padding:3px 0}
 #p-builder .ck.ok{color:var(--cb-ok)}
 #p-builder .ck.warn{color:var(--cb-red);font-weight:700}
+/* clickable required-field rows: deep-link to the blank field */
+#p-builder .ck-jump{cursor:pointer;border-radius:7px;margin:0 -7px;padding-left:7px;padding-right:7px;transition:background .12s,color .12s}
+#p-builder .ck-jump:hover,#p-builder .ck-jump:focus-visible{background:#eaf3fb;color:var(--ed-navy);outline:none}
+#p-builder .ck-jump:focus-visible{box-shadow:0 0 0 2px rgba(30,136,229,.4)}
+/* brief highlight on the field we jumped to */
+#p-builder .cbf.cb-flash{animation:cbFlash 1.2s ease-out}
+@keyframes cbFlash{0%{box-shadow:0 0 0 3px rgba(30,136,229,.35);border-radius:8px}100%{box-shadow:0 0 0 3px rgba(30,136,229,0);border-radius:8px}}
+/* inline evergreen explainer under the campaign fields */
+#p-builder .cb-evg-note{font-family:'DM Sans',sans-serif;font-size:12.5px;line-height:1.5;color:var(--ed-mono);margin:12px 0 0;padding:9px 12px;background:var(--ed-soft);border:1px dashed var(--ed-line);border-radius:9px}
+#p-builder .cb-evg-note code{font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#fff;border:1px solid var(--ed-line);border-radius:5px;padding:1px 5px;color:var(--ed-navy)}
 #p-builder .rl-sec .cb-mini{padding:4px 8px;font-size:10px;margin-left:auto}
 
 /* toast */
