@@ -2518,14 +2518,12 @@ input[type=text]:focus, select:focus{
   --ed-mono:#5b6675; --ed-soft:#f7f9fc; --ed-chipbg:#faf8f3;
   font-family:'Fraunces',Georgia,serif;color:var(--ed-ink);
   -webkit-font-smoothing:antialiased;
-  background-image:radial-gradient(circle at 12% -8%, rgba(110,116,126,.06), transparent 42%),
-                   radial-gradient(circle at 95% 4%, rgba(110,116,126,.045), transparent 40%);
+  background-image:none;
 }
 .gov-ed *{box-sizing:border-box;}
 /* Shared neutral-grey page wash — content blocks, email & forms match governance */
 #p-contentblocks, #p-email, #p-forms{
-  background-image:radial-gradient(circle at 12% -8%, rgba(110,116,126,.06), transparent 42%),
-                   radial-gradient(circle at 95% 4%, rgba(110,116,126,.045), transparent 40%);
+  background-image:none;
 }
 
 /* ── Masthead ── */
@@ -3332,8 +3330,7 @@ input[type=text]:focus, select:focus{
 #cb-library *{box-sizing:border-box;}
 #cb-library{margin:0;padding:0;}
 #p-contentblocks{
-    background-image:radial-gradient(circle at 12% -8%, rgba(110,116,126,.06), transparent 42%),
-                     radial-gradient(circle at 95% 4%, rgba(110,116,126,.045), transparent 40%);
+    background-image:none;
   }
 #cb-library{
     background:transparent;
@@ -5642,7 +5639,7 @@ var TAB_BREADCRUMB = {
   contentblocks: { group:'Governance', leaf:'Content Blocks' }
 };
 
-function showMainTab(id, btn){
+function showMainTab(id, btn, push){
   document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('.mtab').forEach(function(t){t.classList.remove('active');if(t.hasAttribute('role'))t.setAttribute('aria-selected','false');});
   document.querySelectorAll('.nav-item').forEach(function(t){t.classList.remove('active');t.removeAttribute('aria-current');if(t.hasAttribute('role'))t.setAttribute('aria-selected','false');});
@@ -5689,6 +5686,11 @@ function showMainTab(id, btn){
         }catch(e){}
       });
     }, 60);
+  }
+  // Reflect the active section in the URL so a refresh restores it and links work.
+  // push !== false only on real navigation (clicks); applyRoute passes false to avoid loops.
+  if(push!==false){
+    try{ if((location.hash||"").replace(/^#/,"")!==id) history.pushState(null,"","#"+id); }catch(e){}
   }
   // Scroll to top of new tab for clarity
   window.scrollTo({top:0, behavior:'smooth'});
@@ -8787,6 +8789,38 @@ window.showSub = showSub;
     }).catch(function(e){ console.error('[dashboard] manifest.json failed to load', e); });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+<script id="section-router">
+/* URL/hash routing: keeps the active section in the URL (#email, #tags, …) so refresh
+   restores it and sections are linkable. Handles inline AND late-loaded sections. */
+(function(){
+  var DEFAULT="campaigns";
+  var routedInitial=false, obs=null;
+  function hashId(){ return (location.hash||"").replace(/^#/,"").trim(); }
+  function pageExists(id){ return !!document.getElementById("p-"+id); }
+  function applyRoute(){
+    var id=hashId()||DEFAULT;
+    if(!pageExists(id)) return false;
+    var pg=document.getElementById("p-"+id);
+    if(pg && !pg.classList.contains("active") && typeof window.showMainTab==="function"){
+      window.showMainTab(id, null, false);
+    }
+    return true;
+  }
+  function cleanup(){ if(obs){ obs.disconnect(); obs=null; } }
+  function tryInitial(){ if(routedInitial) return; if(applyRoute()){ routedInitial=true; cleanup(); } }
+  function start(){
+    tryInitial();
+    if(!routedInitial){
+      var main=document.querySelector(".main-col");
+      if(main && window.MutationObserver){ obs=new MutationObserver(tryInitial); obs.observe(main,{childList:true}); }
+      setTimeout(cleanup, 6000);
+    }
+    window.addEventListener("popstate", applyRoute);
+    window.addEventListener("hashchange", applyRoute);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();
 </script>
 <script>
