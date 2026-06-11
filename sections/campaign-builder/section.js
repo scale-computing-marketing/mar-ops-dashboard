@@ -87,7 +87,7 @@ function buildDocBody(data){const parts=[];const camp=data.campaign||{};const in
     parts.push(dsection('Basic email information',[{label:'Pardot Email Name',value:e.pardotName},{label:'Tags',value:e.tags}]));
     const tagRows=[{label:'Campaign',value:camp.name}];
     if(e.hasOrder)tagRows.push({label:'Email #',value:e.number||String(i+1)});
-    tagRows.push({label:'Email Type',value:e.emailType,required:true},{label:'Content Type',value:e.contentType,required:true},{label:'Audience',value:e.audience,required:true},{label:'Theme',value:e.theme,required:true},{label:'A/B Test',value:e.abTest||'No'},{label:'CTA',value:e.cta});
+    tagRows.push({label:'Email Type',value:e.emailType,required:true},{label:'Content Type',value:e.contentType,required:true},{label:'Audience',value:e.audience,required:true},{label:'Funnel Stage',value:e.funnel,required:true},{label:'Theme',value:e.theme,required:true},{label:'A/B Test',value:e.abTest||'No'},{label:'CTA',value:e.cta});
     parts.push(dsection('Tagging \u2014 feeds the Tag Builder',tagRows));
     parts.push(dsection('To \u2014 choose who gets this email',[{label:'Lists (Send To)',value:e.lists},{label:'Suppression Lists',value:e.suppression}]));
     parts.push(dsection('From \u2014 choose who it is sent from',[{label:'Sender Name',value:e.senderName||'Scale Computing'},{label:'From Email Address',value:e.fromEmail||'noreply@scalecomputing.com'},{label:'Reply-To Email Address',value:e.replyTo||'noreply@scalecomputing.com'}]));
@@ -143,28 +143,56 @@ function buildDocx(data,logo){const body=buildDocBody(data);
   return zipStore(files);}
 
 
-//// ============ TAG LIBRARY VALUES (canonical) ============
+//// ============ TAG LIBRARY VALUES ============
+// Single source of truth: window.TAG_DATA, defined in index.html (the "Tag Library"
+// section). The option lists below are DERIVED from it at load, so adding, renaming, or
+// retiring a tag in the Tag Library flows into the Campaign Builder with no edit here.
+// The literal "_FB" arrays are a fallback used only when this section is loaded without
+// the shell (e.g. previewed in isolation) and window.TAG_DATA is absent.
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}
-function labelOf(tag,prefix){return cap(tag.replace(prefix,'').replace(/-/g,' '));}
-const SENDTYPE=[['One-time send','one-time-send'],['Manual sequence','manual-sequence'],['Drip / automated sequence','drip-sequence'],['Newsletter','newsletter'],['Transactional','transactional'],['Re-engagement','re-engagement'],['Announcement','announcement'],['A/B test','a-b-test']];
-const AUDIENCE=[['Customer','audience-customer'],['Partner','audience-partner'],['End user','audience-end-user'],['Prospect','audience-prospect'],['Partner prospect','audience-partner-prospect'],['End user prospect','audience-end-user-prospect'],['Internal','audience-internal'],['MSP','audience-msp'],['Reseller','audience-reseller']];
-const FUNNEL=[['Top of funnel (awareness)','stage-tofu'],['Middle of funnel (consideration)','stage-mofu'],['Bottom of funnel (decision)','stage-bofu'],['Nurture','stage-nurture'],['Retention','stage-retention'],['Expansion','stage-expansion'],['Advocacy','stage-advocacy']];
-const CONTENT=['content-webinar-invite','content-webinar-followup','content-post-event','content-event-invite','content-event-reminder','content-gated-content','content-report-syndication','content-product-launch','content-case-study','content-survey','content-award','content-holiday-card','content-meeting-maker','content-review-solicitation','content-save-the-date','content-partner-enablement','content-support-notice','content-customer-referral-program'].map(t=>[labelOf(t,/^content-/),t]);
-const THEME=['theme-vmware-alternative','theme-platform-event','theme-vdi','theme-edge-computing','theme-ransomware-bcdr','theme-retail','theme-healthcare','theme-education','theme-sysadmin','theme-partner-program','theme-product-launch','theme-gartner','theme-dcig','theme-anniversary','theme-customer-advocacy','theme-demo','theme-channel-advocacy'].map(t=>[labelOf(t,/^theme-/),t]).map(p=>p[1]==='theme-dcig'?['DCIG','theme-dcig']:p);
-const CTAOPTS=['cta-pricing','cta-demo','cta-contact','cta-learn-more','cta-register','cta-survey','cta-partner-portal','cta-trial','cta-download','cta-watch','cta-vmware-alternative'].map(t=>[labelOf(t,/^cta-/),t]);
+function labelOf(tag,prefix){return cap(String(tag).replace(prefix,'').replace(/-/g,' '));}
+// Curated display labels for tags whose auto-prettified form isn't quite right.
+var TAG_LABELS={'one-time-send':'One-time send','re-engagement':'Re-engagement','drip-sequence':'Drip / automated sequence','a-b-test':'A/B test','audience-msp':'MSP','theme-dcig':'DCIG','stage-tofu':'Top of funnel (awareness)','stage-mofu':'Middle of funnel (consideration)','stage-bofu':'Bottom of funnel (decision)','stage-nurture':'Nurture','stage-retention':'Retention','stage-expansion':'Expansion','stage-advocacy':'Advocacy'};
+function libTags(){var d=window.TAG_DATA;return (d&&Array.isArray(d.tags))?d.tags:null;}
+// Build [label,tag] option pairs for a Tag Library category, in library order.
+function optsFor(category,prefix){
+  var tags=libTags();if(!tags)return null;
+  var re=prefix?new RegExp('^'+prefix):null;
+  return tags.filter(function(t){return t.category===category;})
+    .map(function(t){return [TAG_LABELS[t.tag]||(re?labelOf(t.tag,re):cap(String(t.tag).replace(/-/g,' '))),t.tag];});
+}
+// Fallback literals (used only when window.TAG_DATA is unavailable).
+const SENDTYPE_FB=[['One-time send','one-time-send'],['Manual sequence','manual-sequence'],['Drip / automated sequence','drip-sequence'],['Newsletter','newsletter'],['Transactional','transactional'],['Re-engagement','re-engagement'],['Announcement','announcement'],['A/B test','a-b-test']];
+const AUDIENCE_FB=[['Customer','audience-customer'],['Partner','audience-partner'],['End user','audience-end-user'],['Prospect','audience-prospect'],['Partner prospect','audience-partner-prospect'],['End user prospect','audience-end-user-prospect'],['Internal','audience-internal'],['MSP','audience-msp'],['Reseller','audience-reseller']];
+const FUNNEL_FB=[['Top of funnel (awareness)','stage-tofu'],['Middle of funnel (consideration)','stage-mofu'],['Bottom of funnel (decision)','stage-bofu'],['Nurture','stage-nurture'],['Retention','stage-retention'],['Expansion','stage-expansion'],['Advocacy','stage-advocacy']];
+const CONTENT_FB=['content-webinar-invite','content-webinar-followup','content-post-event','content-event-invite','content-event-reminder','content-gated-content','content-report-syndication','content-product-launch','content-case-study','content-survey','content-award','content-holiday-card','content-meeting-maker','content-review-solicitation','content-save-the-date','content-partner-enablement','content-support-notice','content-customer-referral-program'].map(t=>[labelOf(t,/^content-/),t]);
+const THEME_FB=['theme-vmware-alternative','theme-platform-event','theme-vdi','theme-edge-computing','theme-ransomware-bcdr','theme-retail','theme-healthcare','theme-education','theme-sysadmin','theme-partner-program','theme-product-launch','theme-gartner','theme-dcig','theme-anniversary','theme-customer-advocacy','theme-demo','theme-channel-advocacy'].map(t=>[labelOf(t,/^theme-/),t]).map(p=>p[1]==='theme-dcig'?['DCIG','theme-dcig']:p);
+const CTAOPTS_FB=['cta-pricing','cta-demo','cta-contact','cta-learn-more','cta-register','cta-survey','cta-partner-portal','cta-trial','cta-download','cta-watch','cta-vmware-alternative'].map(t=>[labelOf(t,/^cta-/),t]);
+// Live lists — Tag Library first, literal fallback second.
+const SENDTYPE=optsFor('Send Type',null)||SENDTYPE_FB;
+const AUDIENCE=optsFor('Audience Type','audience-')||AUDIENCE_FB;
+const FUNNEL=optsFor('Funnel Stage','stage-')||FUNNEL_FB;
+const CONTENT=optsFor('Content Type','content-')||CONTENT_FB;
+const THEME=optsFor('Campaign Theme','theme-')||THEME_FB;
+const CTAOPTS=optsFor('CTA','cta-')||CTAOPTS_FB;
 const AB=[['No','No'],['Yes','Yes']];
 const QUARTERS=[['Q1','1'],['Q2','2'],['Q3','3'],['Q4','4'],['Evergreen','na']];
 const YEARS=[['2025','2025'],['2026','2026'],['2027','2027'],['2028','2028'],['Evergreen','na']];
 const TIME_OPTS=(function(){const out=['As soon as available'];for(let h=0;h<24;h++){for(let m=0;m<60;m+=15){const ap=h<12?'AM':'PM';let hh=h%12;if(hh===0)hh=12;out.push(hh+':'+String(m).padStart(2,'0')+' '+ap+' EST');}}return out;})();
 const DEFAULT_SUPPRESSION=['Suppression | Global','SC Employees'];
 function fmtDate(v){if(!v)return '';const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?(m[2]+'/'+m[3]+'/'+m[1]):v;}
-const REGISTRY=[
+function libCampaigns(){var d=window.TAG_DATA;return (d&&Array.isArray(d.campaigns))?d.campaigns:null;}
+const REGISTRY_FB=[
   {name:'Imaging Service',tag:'campaign-imaging-service-q2-2026',quarter:'2',year:'2026',salesloft:true},
   {name:'DTX Manchester',tag:'campaign-dtx-manchester-q2-2026',quarter:'2',year:'2026',salesloft:false},
   {name:'CRN ARC Survey',tag:'campaign-crn-arc-survey-q2-2026',quarter:'2',year:'2026',salesloft:false},
   {name:'MES Spring',tag:'campaign-mes-spring-q2-2026',quarter:'2',year:'2026',salesloft:true},
   {name:'VMware Alternative',tag:'campaign-vmware-alternative-q2-2026',quarter:'2',year:'2026',salesloft:true}
 ];
+// Derived from the Tag Library's campaign registry; normalize quarter ("Q2"->"2"),
+// year (2026->"2026"), and salesloft (platform string contains "SalesLoft").
+const REGISTRY=(function(){var src=libCampaigns();if(!src)return REGISTRY_FB;
+  return src.map(function(c){return {name:c.name,tag:c.tag,quarter:String(c.quarter||'').replace(/^[Qq]/,''),year:String(c.year||''),salesloft:/salesloft/i.test(c.platform||'')};});})();
 function norm(s){return(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();}
 function slug(s){return(s||'').toLowerCase().trim().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');}
 function cleanName(s){return String(s||'').replace(/^\s*Q[1-4]\s*[-\/\s]?\s*\d{4}\s*[|\u2013\-]*\s*/i,'').trim();}
@@ -178,7 +206,7 @@ function newForm(){return{nameEdited:false,name:'',fields:newFormFields(),previe
 function newCadence(){return{nameEdited:false,name:'',steps:[{subject:'',body:''}],open:true};}
 function newQualified(){return{nameEdited:false,name:'',segment:'',headline:'',body:'',imageUrl:'',subtext:'',ctas:'',open:true};}
 const TC_TYPES=[];
-function newEmail(){return{pardotName:'',pardotEdited:false,hasOrder:true,number:'',emailType:'',contentType:'',audience:'',theme:'',ab:'No',cta:[],
+function newEmail(){return{pardotName:'',pardotEdited:false,hasOrder:true,number:'',emailType:'',contentType:'',audience:'',funnel:'',theme:'',ab:'No',cta:[],
   lists:'',suppressionList:DEFAULT_SUPPRESSION.slice(),senderName:'Scale Computing',fromEmail:'noreply@scalecomputing.com',replyTo:'noreply@scalecomputing.com',
   subjectA:'',subjectB:'',preview:'',sendDate:'',sendTime:'',hero:'',body:'',mainCtaText:'',mainCtaLink:'',secCtaText:'',secCtaLink:'',open:false};}
 
@@ -199,6 +227,7 @@ function computeEmail(i){
   if(e.emailType)tags.push({t:e.emailType,c:'Send Type',req:true,src:'doc'});
   if(e.contentType)tags.push({t:e.contentType,c:'Content Type',req:true,src:'doc'});
   if(e.audience)tags.push({t:e.audience,c:'Audience',req:true,src:'doc'});
+  if(e.funnel)tags.push({t:e.funnel,c:'Funnel Stage',req:true,src:'doc'});
   if(e.theme)tags.push({t:e.theme,c:'Theme',req:true,src:'doc'});
   (e.cta||[]).forEach(t=>tags.push({t:t,c:'CTA',req:false,src:'doc'}));
   return {pardotName,tags,matched};
@@ -293,7 +322,7 @@ function cbParseBuildDoc(xml){
       var pn=v(m,'Pardot Email Name');if(pn)cur.pardotName=pn;
     } else if(cur&&t.indexOf('Tagging')===0){m=mapOf(sec);
       if(m['Email #']){cur.hasOrder=true;cur.number=v(m,'Email #');}else{cur.hasOrder=false;}
-      var sel=[['Email Type',SENDTYPE,'emailType'],['Content Type',CONTENT,'contentType'],['Audience',AUDIENCE,'audience'],['Theme',THEME,'theme']];
+      var sel=[['Email Type',SENDTYPE,'emailType'],['Content Type',CONTENT,'contentType'],['Audience',AUDIENCE,'audience'],['Funnel Stage',FUNNEL,'funnel'],['Theme',THEME,'theme']];
       for(var x=0;x<sel.length;x++){var raw=v(m,sel[x][0]),vv=cbLabelToValue(sel[x][1],raw);cur[sel[x][2]]=vv;if(raw&&!vv)warn.push('Email '+st.emails.length+' \u2014 '+sel[x][0]+': "'+raw+'" not recognized');}
       cur.ab=/yes/i.test(v(m,'A/B Test'))?'Yes':'No';
       var ctaStr=v(m,'CTA');cur.cta=ctaStr?ctaStr.split(/,\s*/).map(function(c){return cbLabelToValue(CTAOPTS,c.trim());}).filter(Boolean):[];
@@ -418,9 +447,9 @@ function missingRequired(){var m=[];var c=state.campaign;var inc=state.include;
     if(!c.quarter)m.push({label:'Quarter',type:'campaign',i:null,key:'c.quarter'});
     if(!c.year)m.push({label:'Year',type:'campaign',i:null,key:'c.year'});
   }
-  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push({label:'Email '+(i+1)+' · '+p[1],type:'email',i:i,key:'e.'+i+'.'+p[0]});});});
+  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['funnel','Funnel Stage'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push({label:'Email '+(i+1)+' · '+p[1],type:'email',i:i,key:'e.'+i+'.'+p[0]});});});
   return m;}
-function emailComplete(i){var e=state.emails[i];return ['emailType','contentType','audience','theme','subjectA'].every(function(k){return String(e[k]||'').trim();});}
+function emailComplete(i){var e=state.emails[i];return ['emailType','contentType','audience','funnel','theme','subjectA'].every(function(k){return String(e[k]||'').trim();});}
 
 /* ---- list (Send To) selector: word-based ranked match over CB_LISTS ---- */
 function listItems(i){var s=state.emails[i].lists;return s?String(s).split('\n').map(function(x){return x.trim();}).filter(Boolean):[];}
@@ -541,6 +570,7 @@ function editorEmail(i){
     +fld({l:'Email Type',req:true,type:'select',opts:SENDTYPE},e.emailType,'e.'+i+'.emailType')
     +fld({l:'Content Type',req:true,type:'select',opts:CONTENT},e.contentType,'e.'+i+'.contentType')
     +fld({l:'Audience',req:true,type:'select',opts:AUDIENCE},e.audience,'e.'+i+'.audience')
+    +fld({l:'Funnel Stage',req:true,type:'select',opts:FUNNEL},e.funnel,'e.'+i+'.funnel')
     +fld({l:'Theme',req:true,type:'select',opts:THEME},e.theme,'e.'+i+'.theme')
     +fld({l:'A/B Test',type:'select',opts:AB,noEmpty:true},e.ab,'e.'+i+'.ab')
     +fld({l:'CTA',type:'chips',opts:CTAOPTS,wide:true},e.cta,'e.'+i+'.cta');
@@ -818,7 +848,7 @@ async function doGenerate(){
       campaign:{name:c.name,crm:c.crm,quarterLabel:revLabel(QUARTERS,c.quarter),yearLabel:revLabel(YEARS,c.year)},
       emails:state.emails.map(function(e,i){var r=computeEmail(i);return{
         number:e.hasOrder?(e.number||String(i+1)):'',hasOrder:e.hasOrder,pardotName:effPardot(i),tags:r.tags.map(function(x){return x.t;}).join(', '),
-        emailType:revLabel(SENDTYPE,e.emailType),contentType:revLabel(CONTENT,e.contentType),audience:revLabel(AUDIENCE,e.audience),
+        emailType:revLabel(SENDTYPE,e.emailType),contentType:revLabel(CONTENT,e.contentType),audience:revLabel(AUDIENCE,e.audience),funnel:revLabel(FUNNEL,e.funnel),
         theme:revLabel(THEME,e.theme),abTest:e.ab||'No',cta:(e.cta||[]).map(function(t){return revLabel(CTAOPTS,t);}).join(', '),
         lists:e.lists,suppression:(e.suppressionList||[]).join('\n'),senderName:e.senderName,fromEmail:e.fromEmail,replyTo:e.replyTo,
         subjectA:e.subjectA,subjectB:e.subjectB,preview:e.preview,sendDate:fmtDate(e.sendDate),sendTime:e.sendTime,
