@@ -144,9 +144,10 @@ function buildDocx(data,logo){const body=buildDocBody(data);
 
 
 //// ============ TAG LIBRARY VALUES ============
-// Single source of truth: window.TAG_DATA, defined in index.html (the "Tag Library"
-// section). The option lists below are DERIVED from it at load, so adding, renaming, or
-// retiring a tag in the Tag Library flows into the Campaign Builder with no edit here.
+// Single source of truth: window.TAG_DATA, defined in data/tag-library.js and loaded
+// by index.html as a blocking <script>. The option lists below are DERIVED from it at
+// load, so adding, renaming, or retiring a tag in data/tag-library.js flows into the
+// Campaign Builder (and the Tag Library section) with no edit here.
 // The literal "_FB" arrays are a fallback used only when this section is loaded without
 // the shell (e.g. previewed in isolation) and window.TAG_DATA is absent.
 function cap(s){return s?s.charAt(0).toUpperCase()+s.slice(1):s;}

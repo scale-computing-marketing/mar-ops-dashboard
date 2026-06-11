@@ -11,6 +11,10 @@ lives in its own small folder and is pulled in at runtime from `manifest.json`.
 ├─ index.html              ← shell: sidebar, masthead, existing inline sections,
 │                                and the section loader (reads manifest.json)
 ├─ manifest.json               ← list of dynamically-loaded sections + their metadata
+├─ data/
+│  └─ tag-library.js           ← SINGLE SOURCE OF TRUTH for all tags, naming rules,
+│                                platform guide, and the campaign registry. Loaded by
+│                                index.html as a blocking <script>; sets window.TAG_DATA.
 ├─ vendor/
 │  └─ docx.bundle.js            ← Word-export engine (docx + JSZip + pako), loaded on
 │                                demand the first time someone exports — not on page load
@@ -28,6 +32,29 @@ over HTTP. GitHub Pages does this automatically. Opening `index.html` directly f
 your hard drive (a `file://` URL) **will not load the sections** — the browser blocks
 `fetch()` of local files. For a quick local preview, run a tiny server from the repo
 root, e.g. `python3 -m http.server` and open `http://localhost:8000/index.html`.
+
+## Updating the Tag Library (single source of truth)
+
+All tags, naming conventions, the platform guide, and the campaign registry live in
+**`data/tag-library.js`** — and nowhere else. `index.html` loads it as a blocking
+`<script>` in `<head>`, which defines `window.TAG_DATA` before any section runs. Both
+the **Tag Library** section and the **Campaign Builder** read from `window.TAG_DATA`, so
+a single edit flows everywhere automatically:
+
+- Add / rename / retire a tag, change a description or platform → edit the `tags` array.
+- Change a naming format → edit the `naming` array.
+- Register a new campaign → add to the `campaigns` array.
+
+No edits to `index.html` are needed (or wanted). The "Total Tags" KPI and all category
+counts are derived from the array at load, so they update themselves.
+
+Two notes:
+
+- The file is a tiny JS wrapper (`var TAG_DATA = { … }; window.TAG_DATA = TAG_DATA;`)
+  around what is otherwise plain JSON — keep that wrapper so the bare `TAG_DATA`
+  references in `index.html` resolve. The object itself is pure data.
+- Browsers cache the file. After committing a change, hard-refresh (or append a
+  `?v=` query to the `<script src>` in `index.html`) to bypass a stale cache.
 
 ## Updating the Campaign Builder
 
