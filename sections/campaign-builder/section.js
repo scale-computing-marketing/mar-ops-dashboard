@@ -87,7 +87,7 @@ function buildDocBody(data){const parts=[];const camp=data.campaign||{};const in
     parts.push(dsection('Basic email information',[{label:'Pardot Email Name',value:e.pardotName},{label:'Tags',value:e.tags}]));
     const tagRows=[{label:'Campaign',value:camp.name}];
     if(e.hasOrder)tagRows.push({label:'Email #',value:e.number||String(i+1)});
-    tagRows.push({label:'Email Type',value:e.emailType,required:true},{label:'Content Type',value:e.contentType,required:true},{label:'Audience',value:e.audience,required:true},{label:'Funnel Stage',value:e.funnel,required:true},{label:'Theme',value:e.theme,required:true},{label:'A/B Test',value:e.abTest||'No'},{label:'CTA',value:e.cta});
+    tagRows.push({label:'Send Type',value:e.emailType,required:true},{label:'Content Type',value:e.contentType,required:true},{label:'Audience Type',value:e.audience,required:true},{label:'Funnel Stage',value:e.funnel,required:true},{label:'Campaign Theme',value:e.theme,required:true},{label:'A/B Test',value:e.abTest||'No'},{label:'CTA',value:e.cta});
     parts.push(dsection('Tagging \u2014 feeds the Tag Builder',tagRows));
     parts.push(dsection('To \u2014 choose who gets this email',[{label:'Lists (Send To)',value:e.lists},{label:'Suppression Lists',value:e.suppression}]));
     parts.push(dsection('From \u2014 choose who it is sent from',[{label:'Sender Name',value:e.senderName||'Scale Computing'},{label:'From Email Address',value:e.fromEmail||'noreply@scalecomputing.com'},{label:'Reply-To Email Address',value:e.replyTo||'noreply@scalecomputing.com'}]));
@@ -226,9 +226,9 @@ function computeEmail(i){
   const tags=[{t:campaignTag,c:'Campaign',req:true,src:matched?'reg':'doc'}];
   if(e.emailType)tags.push({t:e.emailType,c:'Send Type',req:true,src:'doc'});
   if(e.contentType)tags.push({t:e.contentType,c:'Content Type',req:true,src:'doc'});
-  if(e.audience)tags.push({t:e.audience,c:'Audience',req:true,src:'doc'});
+  if(e.audience)tags.push({t:e.audience,c:'Audience Type',req:true,src:'doc'});
   if(e.funnel)tags.push({t:e.funnel,c:'Funnel Stage',req:true,src:'doc'});
-  if(e.theme)tags.push({t:e.theme,c:'Theme',req:true,src:'doc'});
+  if(e.theme)tags.push({t:e.theme,c:'Campaign Theme',req:true,src:'doc'});
   (e.cta||[]).forEach(t=>tags.push({t:t,c:'CTA',req:false,src:'doc'}));
   return {pardotName,tags,matched};
 }
@@ -322,8 +322,8 @@ function cbParseBuildDoc(xml){
       var pn=v(m,'Pardot Email Name');if(pn)cur.pardotName=pn;
     } else if(cur&&t.indexOf('Tagging')===0){m=mapOf(sec);
       if(m['Email #']){cur.hasOrder=true;cur.number=v(m,'Email #');}else{cur.hasOrder=false;}
-      var sel=[['Email Type',SENDTYPE,'emailType'],['Content Type',CONTENT,'contentType'],['Audience',AUDIENCE,'audience'],['Funnel Stage',FUNNEL,'funnel'],['Theme',THEME,'theme']];
-      for(var x=0;x<sel.length;x++){var raw=v(m,sel[x][0]),vv=cbLabelToValue(sel[x][1],raw);cur[sel[x][2]]=vv;if(raw&&!vv)warn.push('Email '+st.emails.length+' \u2014 '+sel[x][0]+': "'+raw+'" not recognized');}
+      var sel=[[['Send Type','Email Type'],SENDTYPE,'emailType'],[['Content Type'],CONTENT,'contentType'],[['Audience Type','Audience'],AUDIENCE,'audience'],[['Funnel Stage'],FUNNEL,'funnel'],[['Campaign Theme','Theme'],THEME,'theme']];
+      for(var x=0;x<sel.length;x++){var labs=sel[x][0],raw='';for(var li=0;li<labs.length;li++){var rv=v(m,labs[li]);if(rv){raw=rv;break;}}var vv=cbLabelToValue(sel[x][1],raw);cur[sel[x][2]]=vv;if(raw&&!vv)warn.push('Email '+st.emails.length+' \u2014 '+labs[0]+': "'+raw+'" not recognized');}
       cur.ab=/yes/i.test(v(m,'A/B Test'))?'Yes':'No';
       var ctaStr=v(m,'CTA');cur.cta=ctaStr?ctaStr.split(/,\s*/).map(function(c){return cbLabelToValue(CTAOPTS,c.trim());}).filter(Boolean):[];
     } else if(cur&&t.indexOf('To')===0){m=mapOf(sec);
@@ -447,7 +447,7 @@ function missingRequired(){var m=[];var c=state.campaign;var inc=state.include;
     if(!c.quarter)m.push({label:'Quarter',type:'campaign',i:null,key:'c.quarter'});
     if(!c.year)m.push({label:'Year',type:'campaign',i:null,key:'c.year'});
   }
-  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Email Type'],['contentType','Content Type'],['audience','Audience'],['funnel','Funnel Stage'],['theme','Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push({label:'Email '+(i+1)+' · '+p[1],type:'email',i:i,key:'e.'+i+'.'+p[0]});});});
+  if(inc.email)state.emails.forEach(function(e,i){[['emailType','Send Type'],['contentType','Content Type'],['audience','Audience Type'],['funnel','Funnel Stage'],['theme','Campaign Theme'],['subjectA','Subject Line A']].forEach(function(p){if(!String(e[p[0]]||'').trim())m.push({label:'Email '+(i+1)+' · '+p[1],type:'email',i:i,key:'e.'+i+'.'+p[0]});});});
   return m;}
 function emailComplete(i){var e=state.emails[i];return ['emailType','contentType','audience','funnel','theme','subjectA'].every(function(k){return String(e[k]||'').trim();});}
 
@@ -567,11 +567,11 @@ function editorEmail(i){
   var tagging=fld({l:'Pardot Email Name',hint:'(auto \u2014 editable)',wide:true,ph:'Q2-2026 | Campaign | Email 1'},e.pardotEdited?(e.pardotName||''):computeEmail(i).pardotName,'e.'+i+'.pardotName')
     +fld({l:'This send has an email order #',type:'check'},e.hasOrder,'e.'+i+'.hasOrder')
     +(e.hasOrder?fld({l:'Email #',ph:'1'},e.number,'e.'+i+'.number'):'')
-    +fld({l:'Email Type',req:true,type:'select',opts:SENDTYPE},e.emailType,'e.'+i+'.emailType')
+    +fld({l:'Send Type',req:true,type:'select',opts:SENDTYPE},e.emailType,'e.'+i+'.emailType')
     +fld({l:'Content Type',req:true,type:'select',opts:CONTENT},e.contentType,'e.'+i+'.contentType')
-    +fld({l:'Audience',req:true,type:'select',opts:AUDIENCE},e.audience,'e.'+i+'.audience')
+    +fld({l:'Audience Type',req:true,type:'select',opts:AUDIENCE},e.audience,'e.'+i+'.audience')
     +fld({l:'Funnel Stage',req:true,type:'select',opts:FUNNEL},e.funnel,'e.'+i+'.funnel')
-    +fld({l:'Theme',req:true,type:'select',opts:THEME},e.theme,'e.'+i+'.theme')
+    +fld({l:'Campaign Theme',req:true,type:'select',opts:THEME},e.theme,'e.'+i+'.theme')
     +fld({l:'A/B Test',type:'select',opts:AB,noEmpty:true},e.ab,'e.'+i+'.ab')
     +fld({l:'CTA',type:'chips',opts:CTAOPTS,wide:true},e.cta,'e.'+i+'.cta');
   var fan='<div class="fan wide"><div class="fan-h">Create audience variants of this send</div>'
@@ -691,14 +691,14 @@ function renderRail(){
   var h='';
   if(active.type==='email'){
     var i=active.i,r=computeEmail(i);
-    var order=['Campaign','Send Type','Content Type','Audience','Theme','CTA'],by={};
+    var order=['Campaign','Send Type','Content Type','Audience Type','Funnel Stage','Campaign Theme','CTA'],by={};
     r.tags.forEach(function(x){(by[x.c]=by[x.c]||[]).push(x);});
     h+='<div class="rl-sec"><div class="rl-h">Pardot name</div><code class="rl-name">'+escH(effPardot(i))+'</code>'
       +'<button type="button" class="cb-iconbtn" data-copyname="'+i+'">'+ICON('copy')+'Copy</button></div>';
     h+='<div class="rl-sec"><div class="rl-h">Tags <span class="rl-c">'+r.tags.length+'</span> <button type="button" class="cb-iconbtn" data-copytags="'+i+'">'+ICON('copy')+'Copy all</button></div>';
     h+=order.filter(function(c){return by[c];}).map(function(c){return '<div class="rl-cat">'+c+'</div><div class="cb-chips cb-sm">'+by[c].map(function(x){return '<span class="cb-tag'+(x.req?' req':'')+'">'+escH(x.t)+'</span>';}).join('')+'</div>';}).join('');
     h+='</div>';
-    var miss=['emailType','contentType','audience','theme','subjectA'];var labels={emailType:'Email type',contentType:'Content type',audience:'Audience',theme:'Theme',subjectA:'Subject A'};
+    var miss=['emailType','contentType','audience','funnel','theme','subjectA'];var labels={emailType:'Send type',contentType:'Content type',audience:'Audience type',funnel:'Funnel stage',theme:'Campaign theme',subjectA:'Subject A'};
     var e=state.emails[i];
     h+='<div class="rl-sec"><div class="rl-h">Checklist</div>'+miss.map(function(k){var ok=String(e[k]||'').trim();return '<div class="ck '+(ok?'ok':'')+'">'+(ok?'\u2713':'\u25cb')+' '+labels[k]+'</div>';}).join('')
       +'<div class="ck '+(listItems(i).length?'ok':'')+'">'+(listItems(i).length?'\u2713':'\u25cb')+' Lists added</div></div>';
