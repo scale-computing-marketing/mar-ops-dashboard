@@ -1,6 +1,6 @@
 {
   "_comment": "Sections loaded dynamically into the dashboard shell at runtime. Add an entry + a folder under sections/<id>/ to add a section. Must be served over HTTP (e.g. GitHub Pages); file:// will not work because the loader uses fetch().",
-  "version": "2026-06-10",
+  "version": "2026-06-10-2",
   "sections": [
     {
       "id": "builder",
